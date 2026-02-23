@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, Upload, Check, ChevronDown, FileText, MapPin, User, Mail, Phone, Building, CreditCard, Bike, Smartphone, Download, CheckCircle, Store, ArrowRight, Map, Locate, Search, X, HelpCircle, Car } from 'lucide-react';
+import PasswordInput from '../components/PasswordInput';
+import { Footer } from '../components/Footer';
 
 interface RiderRegistrationProps {
   onBack: () => void;
@@ -251,6 +253,8 @@ export function RiderRegistration({ onBack }: RiderRegistrationProps) {
   const [isHelpRequested, setIsHelpRequested] = useState(false);
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -261,6 +265,8 @@ export function RiderRegistration({ onBack }: RiderRegistrationProps) {
     lastName: '',
     idNumber: '', // Cedula
     email: '',
+    password: '',
+    confirmPassword: '',
     phonePrefix: '+593',
     phoneNumber: '',
     city: '',
@@ -319,7 +325,16 @@ export function RiderRegistration({ onBack }: RiderRegistrationProps) {
     setIsSuccess(true);
   };
 
-  const nextStep = () => setStep(s => Math.min(s + 1, 3));
+  const nextStep = () => {
+    if (step === 1) {
+      if (formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword) {
+        setErrors(prev => ({...prev, confirmPassword: 'Las contraseñas no coinciden'}));
+        return;
+      }
+      setErrors(prev => ({...prev, confirmPassword: ''}));
+    }
+    setStep(s => Math.min(s + 1, 3));
+  };
   const prevStep = () => setStep(s => Math.max(s - 1, 1));
 
   if (isSuccess) {
@@ -354,7 +369,7 @@ export function RiderRegistration({ onBack }: RiderRegistrationProps) {
       </div>
 
       {/* Navigation */}
-      <nav className="relative z-50 flex items-center justify-between px-6 py-6 max-w-7xl mx-auto w-full">
+      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 max-w-7xl mx-auto w-full bg-white/80 backdrop-blur-md border-b border-slate-100/50 rounded-b-2xl md:rounded-none md:bg-transparent md:backdrop-blur-none md:border-none transition-all">
         <div className="flex items-center gap-2">
           <div className="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center shadow-lg shadow-green-500/30">
             <span className="text-white font-bold text-xl">FT</span>
@@ -372,7 +387,7 @@ export function RiderRegistration({ onBack }: RiderRegistrationProps) {
       </nav>
 
       {/* Main Content */}
-      <main className="flex-1 relative z-10 max-w-3xl mx-auto w-full px-6 pb-20 flex flex-col justify-center">
+      <main className="flex-1 relative z-10 max-w-3xl mx-auto w-full px-6 pt-24 pb-20 flex flex-col justify-center">
         
         {/* Progress Bar - Only show if step > 0 */}
         {step > 0 && (
@@ -549,6 +564,30 @@ export function RiderRegistration({ onBack }: RiderRegistrationProps) {
                     </div>
                   </div>
 
+                  <div className="space-y-2">
+                    <PasswordInput
+                        label="Contraseña"
+                        value={formData.password}
+                        onChange={(val) => setFormData({...formData, password: val})}
+                        showStrengthMeter={true}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <PasswordInput
+                        label="Confirmar Contraseña"
+                        value={formData.confirmPassword}
+                        onChange={(val) => {
+                          setFormData({...formData, confirmPassword: val});
+                          if (errors.confirmPassword) setErrors(prev => ({...prev, confirmPassword: ''}));
+                        }}
+                        placeholder="••••••••"
+                        error={errors.confirmPassword}
+                        success={formData.password.length > 0 && formData.password === formData.confirmPassword}
+                        successMessage="Las contraseñas coinciden"
+                    />
+                  </div>
+
                   <div className="space-y-2 md:col-span-2">
                     <label className="text-sm font-bold text-slate-700 ml-1">Teléfono Móvil</label>
                     <div className="flex gap-3">
@@ -707,7 +746,7 @@ export function RiderRegistration({ onBack }: RiderRegistrationProps) {
                 <div className="pt-6 flex justify-end">
                   <button 
                     onClick={nextStep}
-                    className="px-8 py-4 bg-green-500 text-white font-bold rounded-2xl shadow-xl shadow-green-500/30 hover:bg-green-600 hover:shadow-green-500/40 transition-all active:scale-95 flex items-center gap-2"
+                    className="w-full md:w-auto px-8 py-4 bg-green-500 text-white font-bold rounded-2xl shadow-xl shadow-green-500/30 hover:bg-green-600 hover:shadow-green-500/40 transition-all active:scale-95 flex items-center justify-center gap-2"
                   >
                     Continuar
                     <ArrowLeft className="rotate-180" size={20} />
@@ -793,16 +832,16 @@ export function RiderRegistration({ onBack }: RiderRegistrationProps) {
                     </div>
                 )}
 
-                <div className="pt-6 flex justify-between">
+                <div className="pt-6 flex flex-col md:flex-row justify-between gap-4 md:gap-0">
                   <button 
                     onClick={prevStep}
-                    className="px-8 py-4 bg-slate-100 text-slate-600 font-bold rounded-2xl hover:bg-slate-200 transition-all active:scale-95"
+                    className="w-full md:w-auto px-8 py-4 bg-slate-100 text-slate-600 font-bold rounded-2xl hover:bg-slate-200 transition-all active:scale-95"
                   >
                     Atrás
                   </button>
                   <button 
                     onClick={nextStep}
-                    className="px-8 py-4 bg-green-500 text-white font-bold rounded-2xl shadow-xl shadow-green-500/30 hover:bg-green-600 hover:shadow-green-500/40 transition-all active:scale-95 flex items-center gap-2"
+                    className="w-full md:w-auto px-8 py-4 bg-green-500 text-white font-bold rounded-2xl shadow-xl shadow-green-500/30 hover:bg-green-600 hover:shadow-green-500/40 transition-all active:scale-95 flex items-center justify-center gap-2"
                   >
                     Continuar
                     <ArrowLeft className="rotate-180" size={20} />
@@ -862,16 +901,33 @@ export function RiderRegistration({ onBack }: RiderRegistrationProps) {
                 </div>
 
                 <div className="pt-6 flex flex-col gap-4">
-                  <div className="flex justify-between">
+                  <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                    <div className="relative flex items-center">
+                      <input 
+                        type="checkbox" 
+                        id="terms" 
+                        checked={termsAccepted}
+                        onChange={(e) => setTermsAccepted(e.target.checked)}
+                        className="peer h-6 w-6 cursor-pointer appearance-none rounded-lg border-2 border-slate-300 bg-white transition-all checked:border-green-500 checked:bg-green-500 hover:border-green-400 focus:outline-none focus:ring-2 focus:ring-green-500/20"
+                      />
+                      <Check size={16} className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white opacity-0 transition-opacity peer-checked:opacity-100" />
+                    </div>
+                    <label htmlFor="terms" className="cursor-pointer text-sm text-slate-600 select-none">
+                      Acepto los <a href="#" className="font-bold text-green-600 hover:underline">términos y condiciones</a> y la política de privacidad.
+                    </label>
+                  </div>
+
+                  <div className="flex flex-col md:flex-row justify-between gap-4 md:gap-0">
                     <button 
                       onClick={prevStep}
-                      className="px-8 py-4 bg-slate-100 text-slate-600 font-bold rounded-2xl hover:bg-slate-200 transition-all active:scale-95"
+                      className="w-full md:w-auto px-8 py-4 bg-slate-100 text-slate-600 font-bold rounded-2xl hover:bg-slate-200 transition-all active:scale-95"
                     >
                       Atrás
                     </button>
                     <button 
                       onClick={handleSubmit}
-                      className="px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold rounded-2xl shadow-xl shadow-green-500/30 hover:shadow-2xl hover:shadow-green-500/40 transition-all active:scale-95 flex items-center gap-2"
+                      disabled={!termsAccepted}
+                      className={`w-full md:w-auto px-8 py-4 font-bold rounded-2xl shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2 ${termsAccepted ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-green-500/30 hover:shadow-2xl hover:shadow-green-500/40' : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'}`}
                     >
                       <Check size={20} />
                       Enviar Solicitud
@@ -903,6 +959,7 @@ export function RiderRegistration({ onBack }: RiderRegistrationProps) {
           setIsMapOpen(false);
         }} 
       />
+      <Footer />
     </div>
   );
 }

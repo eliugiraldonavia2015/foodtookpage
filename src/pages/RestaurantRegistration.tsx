@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, Upload, Check, ChevronDown, FileText, MapPin, User, Mail, Phone, Building, CreditCard, ChefHat, Smartphone, Download, CheckCircle, Store, ExternalLink, ArrowRight, Map, Locate, Search, X, HelpCircle } from 'lucide-react';
+import PasswordInput from '../components/PasswordInput';
+import { Footer } from '../components/Footer';
 
 interface RestaurantRegistrationProps {
   onBack: () => void;
@@ -298,6 +300,8 @@ export function RestaurantRegistration({ onBack }: RestaurantRegistrationProps) 
   const [isHelpRequested, setIsHelpRequested] = useState(false);
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   
   // Scroll to top when step changes or success screen is shown
   useEffect(() => {
@@ -309,6 +313,8 @@ export function RestaurantRegistration({ onBack }: RestaurantRegistrationProps) 
     ruc: '',
     ownerName: '',
     email: '',
+    password: '',
+    confirmPassword: '',
     phonePrefix: '+593',
     phoneNumber: '',
     country: 'Ecuador',
@@ -365,7 +371,16 @@ export function RestaurantRegistration({ onBack }: RestaurantRegistrationProps) 
     setIsSuccess(true);
   };
 
-  const nextStep = () => setStep(s => Math.min(s + 1, 3));
+  const nextStep = () => {
+    if (step === 1) {
+      if (formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword) {
+        setErrors(prev => ({...prev, confirmPassword: 'Las contraseñas no coinciden'}));
+        return;
+      }
+      setErrors(prev => ({...prev, confirmPassword: ''}));
+    }
+    setStep(s => Math.min(s + 1, 3));
+  };
   const prevStep = () => setStep(s => Math.max(s - 1, 1));
 
   if (isSuccess) {
@@ -400,7 +415,7 @@ export function RestaurantRegistration({ onBack }: RestaurantRegistrationProps) 
       </div>
 
       {/* Navigation */}
-      <nav className="relative z-50 flex items-center justify-between px-6 py-6 max-w-7xl mx-auto w-full">
+      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 max-w-7xl mx-auto w-full bg-white/80 backdrop-blur-md border-b border-slate-100/50 rounded-b-2xl md:rounded-none md:bg-transparent md:backdrop-blur-none md:border-none transition-all">
         <div className="flex items-center gap-2">
           <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/30">
             <span className="text-white font-bold text-xl">FT</span>
@@ -418,7 +433,7 @@ export function RestaurantRegistration({ onBack }: RestaurantRegistrationProps) 
       </nav>
 
       {/* Main Content */}
-      <main className="flex-1 relative z-10 max-w-3xl mx-auto w-full px-6 pb-20 flex flex-col justify-center">
+      <main className="flex-1 relative z-10 max-w-3xl mx-auto w-full px-6 pt-24 pb-20 flex flex-col justify-center">
         
         {/* Progress Bar - Only show if step > 0 */}
         {step > 0 && (
@@ -593,6 +608,30 @@ export function RestaurantRegistration({ onBack }: RestaurantRegistrationProps) 
                         placeholder="admin@restaurante.com"
                       />
                     </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <PasswordInput
+                        label="Contraseña"
+                        value={formData.password}
+                        onChange={(val) => setFormData({...formData, password: val})}
+                        showStrengthMeter={true}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <PasswordInput
+                        label="Confirmar Contraseña"
+                        value={formData.confirmPassword}
+                        onChange={(val) => {
+                          setFormData({...formData, confirmPassword: val});
+                          if (errors.confirmPassword) setErrors(prev => ({...prev, confirmPassword: ''}));
+                        }}
+                        placeholder="••••••••"
+                        error={errors.confirmPassword}
+                        success={formData.password.length > 0 && formData.password === formData.confirmPassword}
+                        successMessage="Las contraseñas coinciden"
+                    />
                   </div>
 
                   <div className="space-y-2 md:col-span-2">
@@ -783,6 +822,22 @@ export function RestaurantRegistration({ onBack }: RestaurantRegistrationProps) 
                 </div>
 
                 <div className="pt-6 flex flex-col gap-4">
+                  <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                    <div className="relative flex items-center">
+                      <input 
+                        type="checkbox" 
+                        id="terms" 
+                        checked={termsAccepted}
+                        onChange={(e) => setTermsAccepted(e.target.checked)}
+                        className="peer h-6 w-6 cursor-pointer appearance-none rounded-lg border-2 border-slate-300 bg-white transition-all checked:border-orange-500 checked:bg-orange-500 hover:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+                      />
+                      <Check size={16} className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white opacity-0 transition-opacity peer-checked:opacity-100" />
+                    </div>
+                    <label htmlFor="terms" className="cursor-pointer text-sm text-slate-600 select-none">
+                      Acepto los <a href="#" className="font-bold text-orange-600 hover:underline">términos y condiciones</a> y la política de privacidad.
+                    </label>
+                  </div>
+
                   <div className="flex justify-between">
                     <button 
                       onClick={prevStep}
@@ -792,7 +847,8 @@ export function RestaurantRegistration({ onBack }: RestaurantRegistrationProps) 
                     </button>
                     <button 
                       onClick={handleSubmit}
-                      className="px-8 py-4 bg-gradient-to-r from-orange-500 to-red-600 text-white font-bold rounded-2xl shadow-xl shadow-orange-500/30 hover:shadow-2xl hover:shadow-orange-500/40 transition-all active:scale-95 flex items-center gap-2"
+                      disabled={!termsAccepted}
+                      className={`px-8 py-4 font-bold rounded-2xl shadow-xl transition-all active:scale-95 flex items-center gap-2 ${termsAccepted ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white shadow-orange-500/30 hover:shadow-2xl hover:shadow-orange-500/40' : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'}`}
                     >
                       <Check size={20} />
                       Enviar Solicitud
@@ -824,6 +880,7 @@ export function RestaurantRegistration({ onBack }: RestaurantRegistrationProps) 
           setIsMapOpen(false);
         }} 
       />
+      <Footer />
     </div>
   );
 }

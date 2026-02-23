@@ -1,6 +1,7 @@
 import { motion } from 'motion/react';
 import { ArrowLeft, Bike, CheckCircle, Clock, DollarSign, MapPin, ShieldCheck, TrendingUp } from 'lucide-react';
 import { useEffect } from 'react';
+import { Footer } from '../components/Footer';
 
 interface RiderLandingPageProps {
   onBack: () => void;
@@ -22,7 +23,7 @@ export function RiderLandingPage({ onBack, onRegisterClick }: RiderLandingPagePr
       </div>
 
       {/* Navigation */}
-      <nav className="relative z-50 flex items-center justify-between px-6 py-6 max-w-7xl mx-auto">
+      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 max-w-7xl mx-auto w-full bg-white/80 backdrop-blur-md border-b border-slate-100/50 transition-all">
         <div className="flex items-center gap-2">
           <div className="w-10 h-10 bg-brand-green rounded-xl flex items-center justify-center shadow-lg shadow-brand-green/30">
             <span className="text-white font-bold text-xl">FT</span>
@@ -35,12 +36,12 @@ export function RiderLandingPage({ onBack, onRegisterClick }: RiderLandingPagePr
           className="flex items-center gap-2 px-4 py-2 rounded-full font-medium text-slate-600 hover:text-brand-green hover:bg-brand-green/5 transition-all"
         >
           <ArrowLeft size={18} />
-          <span>Volver al inicio</span>
+          <span className="hidden sm:inline">Volver al inicio</span>
         </button>
       </nav>
 
       {/* Hero Section */}
-      <main className="relative z-10 max-w-7xl mx-auto px-6 py-8 lg:py-12 grid lg:grid-cols-2 gap-12 items-center">
+      <main className="relative z-10 max-w-7xl mx-auto px-6 pt-24 lg:pt-32 pb-8 lg:pb-12 grid lg:grid-cols-2 gap-12 items-center">
         
         <motion.div 
           initial={{ opacity: 0, x: -50 }}
@@ -182,6 +183,8 @@ export function RiderLandingPage({ onBack, onRegisterClick }: RiderLandingPagePr
           </div>
         </div>
       </section>
+      
+      <Footer />
     </div>
   );
 }
