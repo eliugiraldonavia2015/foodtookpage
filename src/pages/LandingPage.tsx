@@ -150,7 +150,7 @@ export function LandingPage({ onAdminClick, onUserLoginClick, onRiderClick, onRe
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsMobileMenuOpen(false)}
-              className="fixed inset-0 bg-black/50 z-[60] md:hidden"
+              className="hidden"
             />
             <motion.div
               initial={{ x: '100%' }}

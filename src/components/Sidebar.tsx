@@ -35,7 +35,7 @@ export function Sidebar({ activeTab, setActiveTab, onLogout, isOpen, onClose }: 
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/60 z-40 md:hidden"
+            className="hidden"
           />
         )}
       </AnimatePresence>
