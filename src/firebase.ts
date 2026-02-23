@@ -19,15 +19,8 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 
 // Inicializar Firestore
-// Usamos initializeFirestore para conectarnos a la base de datos correcta.
-// En iOS usas: Firestore.firestore(database: "logincloud")
-// Si "logincloud" es el nombre de una base de datos secundaria, usamos esto:
-// export const db = initializeFirestore(app, {}, "logincloud");
-// PERO: Si "logincloud" era solo una confusión con el nombre del proyecto o bucket,
-// y tu base de datos principal es la default, usa getFirestore(app).
-// Dado que en la consola web NO te pidió crear una base de datos con nombre específico,
-// lo más probable es que debamos usar la default primero. Si falla, cambiamos.
-// Voy a configurar la default primero para asegurar compatibilidad web estándar.
-export const db = getFirestore(app);
+// Intentamos usar la base de datos "logincloud" explícitamente como en iOS.
+// Si esto falla, podemos probar con getFirestore(app) que usa la default.
+export const db = initializeFirestore(app, {}, "logincloud");
 
 export default app;

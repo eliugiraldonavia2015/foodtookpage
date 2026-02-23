@@ -42,33 +42,46 @@ function App() {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         try {
+          console.log("Usuario autenticado:", firebaseUser.email);
           // Fetch user data from Firestore
           const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
           if (userDoc.exists()) {
+            console.log("Datos de usuario encontrados en Firestore");
             const userData = userDoc.data();
             setUser({
               id: firebaseUser.uid,
               email: firebaseUser.email || '',
-              role: (userData.role as User['role']) || 'user', // Default to user if no role
+              role: (userData.role as User['role']) || 'user',
               name: userData.firstName ? `${userData.firstName} ${userData.lastName}` : (userData.name || 'Usuario'),
               status: (userData.status as User['status']) || 'active',
               joinedDate: userData.createdAt || new Date().toISOString()
             } as User);
           } else {
+             console.warn("Usuario autenticado pero NO encontrado en Firestore (users collection)");
              // Fallback if no firestore doc
              setUser({
                id: firebaseUser.uid,
                email: firebaseUser.email || '',
-               role: 'user',
+               role: 'user', // Default Role
                name: firebaseUser.displayName || 'Usuario',
                status: 'active',
                joinedDate: new Date().toISOString()
              });
           }
         } catch (error) {
-          console.error("Error fetching user profile:", error);
+          console.error("Error fetching user profile from Firestore:", error);
+          // CRITICAL: Even if Firestore fails, we must set the user state so they are not stuck on login screen
+          setUser({
+            id: firebaseUser.uid,
+            email: firebaseUser.email || '',
+            role: 'user', // Fallback role
+            name: firebaseUser.displayName || 'Usuario (Sin perfil)',
+            status: 'active',
+            joinedDate: new Date().toISOString()
+          });
         }
       } else {
+        console.log("No hay usuario autenticado");
         setUser(null);
       }
       setIsLoading(false);
