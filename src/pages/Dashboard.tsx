@@ -221,7 +221,7 @@ const GeneralSection = () => {
     <GlobalFilters />
     
     {/* Row 1: Executive KPIs */}
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
       <StatCard 
         index={0} title="GMV Total" value={northStarKpis.gmv} change="+6.2%" trend="up" 
         icon={DollarSign} color="from-green-500" subtext="Últimos 30 días"
@@ -254,7 +254,7 @@ const GeneralSection = () => {
     </div>
 
     {/* Row 2: Secondary Metrics */}
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
       <StatCard title="Orders / User" value={northStarKpis.avgOrdersPerUser} change="+0.2" trend="up" icon={Users} color="from-indigo-500" subtext="Activos" tooltip="Frecuencia de Compra. Promedio de pedidos por usuario activo. Clave para medir la lealtad y el hábito de consumo." />
       <StatCard title="Cost / Order" value={northStarKpis.costPerOrder} change="-0.1" trend="up" icon={DollarSign} color="from-rose-500" subtext="Promedio" tooltip="Costo por Orden (CPO). Gasto operativo promedio necesario para procesar un pedido. Reducirlo mejora directamente la rentabilidad." />
       <StatCard title="View-to-Order" value={northStarKpis.viewToOrderRate} change="+0.5%" trend="up" icon={Zap} color="from-yellow-500" subtext="Conversión" tooltip="Tasa de Conversión (View-to-Order). Porcentaje de usuarios que ven un menú y compran. Mide la efectividad del catálogo y la experiencia de usuario." />

@@ -12,7 +12,7 @@ import { DishRequests } from './pages/DishRequests';
 import { RestaurantRequests } from './pages/RestaurantRequests';
 import { Dashboard } from './pages/Dashboard';
 import { User, Tab, Restaurant } from './types';
-import { Bell, Search, Settings, Download } from 'lucide-react';
+import { Bell, Search, Settings, Download, Menu } from 'lucide-react';
 import { exportToCSV } from './utils/csvExport';
 import { 
   northStarKpis, growthKpis, engagementKpis, socialKpis, 
@@ -27,6 +27,7 @@ function App() {
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<string | null>(null);
   const [users, setUsers] = useState<(User | Restaurant)[]>(usersData);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -177,8 +178,13 @@ function App() {
       <div className={`transition-all duration-300 ${isModalOpen ? '-ml-72 opacity-0 pointer-events-none' : ''}`}>
         <Sidebar 
           activeTab={activeTab} 
-          setActiveTab={setActiveTab} 
+          setActiveTab={(tab) => {
+            setActiveTab(tab);
+            setIsSidebarOpen(false);
+          }}
           onLogout={handleLogout} 
+          isOpen={isSidebarOpen}
+          onClose={() => setIsSidebarOpen(false)}
         />
       </div>
       
@@ -187,9 +193,17 @@ function App() {
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,#1f2937,transparent_55%)] opacity-80"></div>
           <div className="relative z-10 px-4 sm:px-4 py-4">
             <header className="flex flex-col lg:flex-row justify-between gap-4 lg:items-center mb-5">
-              <div className="flex flex-col gap-1">
-                <h2 className="text-2xl font-bold text-white tracking-tight">{getPageTitle()}</h2>
-                <p className="text-sm text-slate-400">Panel de control administrativo</p>
+              <div className="flex items-center gap-4">
+                <button 
+                  onClick={() => setIsSidebarOpen(true)}
+                  className="p-2 -ml-2 text-slate-400 hover:text-white rounded-lg hover:bg-white/5 md:hidden"
+                >
+                  <Menu size={24} />
+                </button>
+                <div className="flex flex-col gap-1">
+                  <h2 className="text-2xl font-bold text-white tracking-tight">{getPageTitle()}</h2>
+                  <p className="text-sm text-slate-400">Panel de control administrativo</p>
+                </div>
               </div>
 
               <div className="flex items-center gap-3 flex-1">

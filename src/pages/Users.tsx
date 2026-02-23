@@ -143,7 +143,7 @@ export function UsersList({ onViewDishes, users, searchTerm, onToggleBan, onAddU
         </button>
       </div>
 
-      <div className="bg-slate-950/70 rounded-3xl shadow-[0_25px_60px_rgba(0,0,0,0.5)] border border-white/10 max-w-[calc(100vw-3rem)] md:max-w-[calc(100vw-18rem)] mx-auto overflow-hidden">
+      <div className="hidden md:block bg-slate-950/70 rounded-3xl shadow-[0_25px_60px_rgba(0,0,0,0.5)] border border-white/10 max-w-[calc(100vw-3rem)] md:max-w-[calc(100vw-18rem)] mx-auto overflow-hidden">
         <div 
           className="w-full overflow-x-auto pb-6 custom-scrollbar"
           style={{ 
@@ -384,6 +384,81 @@ export function UsersList({ onViewDishes, users, searchTerm, onToggleBan, onAddU
             <button className="px-4 py-2 bg-white/10 text-white rounded-xl text-sm font-medium hover:bg-white/20">Siguiente</button>
           </div>
         </div>
+      </div>
+
+      {/* Mobile Card View */}
+      <div className="md:hidden space-y-4">
+        {filteredUsers.map((user) => (
+          <div key={user.id} className="bg-slate-950/70 p-5 rounded-2xl border border-white/10 shadow-lg">
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center text-slate-300 font-bold text-lg border border-white/5">
+                  {user.name.charAt(0)}
+                </div>
+                <div>
+                  <h3 className="font-bold text-white text-base">{user.name}</h3>
+                  <p className="text-xs text-slate-500">{user.email}</p>
+                </div>
+              </div>
+              <div className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                user.status === 'active' 
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                  : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+              }`}>
+                {user.status === 'active' ? 'Activo' : 'Baneado'}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className="bg-white/5 p-3 rounded-xl border border-white/5">
+                <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Rol</p>
+                <div className="flex items-center gap-1.5">
+                  {user.role === 'admin' && <Shield size={14} className="text-brand-pink" />}
+                  {user.role === 'restaurant' && <Store size={14} className="text-cyan-400" />}
+                  {user.role === 'staff' && <Briefcase size={14} className="text-amber-400" />}
+                  <span className="text-sm font-medium text-slate-200 capitalize">
+                    {user.role === 'staff' ? user.staffRole : user.role}
+                  </span>
+                </div>
+              </div>
+
+              <div className="bg-white/5 p-3 rounded-xl border border-white/5">
+                <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">
+                  {user.role === 'restaurant' ? 'GMV' : 'LTV'}
+                </p>
+                <span className="text-sm font-bold text-emerald-400">
+                  ${user.role === 'restaurant' ? (user as Restaurant).gmv?.toLocaleString() : (user as any).ltv || 0}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-4 border-t border-white/10">
+              <button 
+                onClick={() => onViewDishes?.(user.id)}
+                className="flex items-center gap-2 px-4 py-2 bg-white/5 rounded-xl text-xs font-bold text-slate-300 hover:bg-white/10 hover:text-white transition-all"
+              >
+                <Utensils size={14} />
+                Ver Platos
+              </button>
+              
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => toggleBanStatus(user.id)}
+                  className={`p-2 rounded-xl border border-white/5 transition-all ${
+                    user.status === 'banned' 
+                      ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' 
+                      : 'bg-white/5 text-slate-400 hover:bg-rose-500/10 hover:text-rose-400'
+                  }`}
+                >
+                  <Ban size={18} />
+                </button>
+                <button className="p-2 bg-white/5 text-slate-400 rounded-xl border border-white/5 hover:bg-white/10 hover:text-white transition-all">
+                  <MoreVertical size={18} />
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Create User Modal */}

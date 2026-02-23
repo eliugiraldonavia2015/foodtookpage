@@ -1,5 +1,5 @@
-import { motion } from 'motion/react';
-import { ArrowRight, Play, UtensilsCrossed, Zap, TrendingUp, ShoppingBag, ShieldCheck, Smartphone, Globe, Heart, Mail, MapPin, Phone, Instagram, Facebook, CheckCircle, Bike, ChefHat, User } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { ArrowRight, Play, UtensilsCrossed, Zap, TrendingUp, ShoppingBag, ShieldCheck, Smartphone, Globe, Heart, Mail, MapPin, Phone, Instagram, Facebook, CheckCircle, Bike, ChefHat, User, Menu, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { DemoModal } from '../components/DemoModal';
 
@@ -29,6 +29,7 @@ interface LandingPageProps {
 
 export function LandingPage({ onAdminClick, onUserLoginClick, onRiderClick, onRestaurantClick }: LandingPageProps) {
   const [isDemoOpen, setIsDemoOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -122,16 +123,114 @@ export function LandingPage({ onAdminClick, onUserLoginClick, onRiderClick, onRe
             <div className="h-6 w-px bg-slate-200 hidden sm:block"></div>
             <button 
               onClick={onAdminClick}
-              className="pl-4 pr-5 py-2.5 rounded-full bg-slate-900 text-white font-bold hover:bg-slate-800 transition-all shadow-lg hover:shadow-xl active:scale-95 flex items-center gap-2 text-sm group border border-transparent hover:border-slate-700"
+              className="pl-4 pr-5 py-2.5 rounded-full bg-slate-900 text-white font-bold hover:bg-slate-800 transition-all shadow-lg hover:shadow-xl active:scale-95 flex items-center gap-2 text-sm group border border-transparent hover:border-slate-700 hidden sm:flex"
             >
               <div className="w-5 h-5 bg-white/10 rounded-full flex items-center justify-center group-hover:bg-brand-pink group-hover:text-white transition-colors duration-300">
                 <ShieldCheck size={12} className="text-slate-300 group-hover:text-white transition-colors" />
               </div>
               <span>Admin</span>
             </button>
+            
+            {/* Mobile Menu Button */}
+            <button 
+              className="md:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-full transition-colors ml-2"
+              onClick={() => setIsMobileMenuOpen(true)}
+            >
+              <Menu size={24} />
+            </button>
           </div>
         </div>
       </motion.header>
+
+      {/* Mobile Menu Overlay */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[60] md:hidden"
+            />
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="fixed top-0 right-0 bottom-0 w-[280px] bg-white z-[70] shadow-2xl md:hidden flex flex-col p-6 overflow-y-auto"
+            >
+              <div className="flex items-center justify-between mb-8">
+                 <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-brand-pink rounded-full flex items-center justify-center shadow-lg shadow-brand-pink/30">
+                      <span className="text-white font-bold text-xs">FT</span>
+                    </div>
+                    <span className="font-bold text-lg text-slate-800">Menú</span>
+                 </div>
+                 <button 
+                   onClick={() => setIsMobileMenuOpen(false)}
+                   className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-colors"
+                 >
+                   <X size={24} />
+                 </button>
+              </div>
+              
+              <nav className="flex flex-col gap-2 mb-8">
+                {[
+                  { label: 'Inicio', href: '#home' },
+                  { label: 'Nosotros', href: '#about' },
+                  { label: 'Únete', href: '#ecosystem' },
+                  { label: 'Contacto', href: '#contact' }
+                ].map((item) => (
+                  <a 
+                    key={item.label}
+                    href={item.href}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setIsMobileMenuOpen(false);
+                      const element = document.querySelector(item.href);
+                      if (element) {
+                        const headerOffset = 100;
+                        const elementPosition = element.getBoundingClientRect().top;
+                        const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+                        window.scrollTo({
+                          top: offsetPosition,
+                          behavior: "smooth"
+                        });
+                      }
+                    }}
+                    className="px-4 py-3 rounded-xl text-base font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-all"
+                  >
+                    {item.label}
+                  </a>
+                ))}
+              </nav>
+
+              <div className="mt-auto space-y-4">
+                <button 
+                  onClick={() => {
+                    onUserLoginClick();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="w-full py-3 rounded-xl font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-all text-sm"
+                >
+                  Iniciar Sesión
+                </button>
+                <button 
+                  onClick={() => {
+                    onAdminClick();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="w-full py-3 rounded-xl bg-slate-900 text-white font-bold hover:bg-slate-800 transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2 text-sm"
+                >
+                  <ShieldCheck size={16} />
+                  <span>Admin Panel</span>
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Hero Section */}
       <main id="home" className="relative z-10 max-w-7xl mx-auto px-6 pt-24 pb-20 lg:pt-28 lg:pb-32 grid lg:grid-cols-2 gap-12 items-center">

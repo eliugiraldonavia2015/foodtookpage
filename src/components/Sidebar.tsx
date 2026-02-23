@@ -1,14 +1,16 @@
-import { LogOut, LayoutDashboard, TrendingUp, Heart, Activity, Shield, DollarSign, Map, Users, Utensils, ClipboardList, Store } from 'lucide-react';
-import { motion } from 'motion/react';
+import { LogOut, LayoutDashboard, TrendingUp, Heart, Activity, Shield, DollarSign, Map, Users, Utensils, ClipboardList, Store, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Tab } from '../types';
 
 interface SidebarProps {
   activeTab: Tab;
   setActiveTab: (tab: Tab) => void;
   onLogout: () => void;
+  isOpen: boolean;
+  onClose: () => void;
 }
 
-export function Sidebar({ activeTab, setActiveTab, onLogout }: SidebarProps) {
+export function Sidebar({ activeTab, setActiveTab, onLogout, isOpen, onClose }: SidebarProps) {
   const menuItems = [
     { id: 'command-center', label: 'Command Center', icon: LayoutDashboard },
     { id: 'growth', label: 'Growth', icon: TrendingUp },
@@ -24,10 +26,37 @@ export function Sidebar({ activeTab, setActiveTab, onLogout }: SidebarProps) {
   ] as const;
 
   return (
-    <aside className="w-72 h-screen fixed left-0 top-0 z-20 p-4 hidden md:flex flex-col">
-      <div className="flex-1 bg-slate-950/80 backdrop-blur-2xl border border-white/10 shadow-[0_30px_70px_rgba(0,0,0,0.55)] rounded-[32px] flex flex-col overflow-hidden relative">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,#1f2937,transparent_65%)] opacity-70"></div>
-        <div className="relative z-10 p-8 pb-4">
+    <>
+      {/* Mobile Overlay */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
+          />
+        )}
+      </AnimatePresence>
+
+      <aside className={`
+        fixed top-0 left-0 z-50 h-screen w-72 p-4 flex flex-col transition-transform duration-300 ease-[cubic-bezier(0.2,0,0,1)]
+        ${isOpen ? 'translate-x-0' : '-translate-x-full'} 
+        md:translate-x-0
+      `}>
+        <div className="flex-1 bg-slate-950/90 backdrop-blur-2xl border border-white/10 shadow-[0_30px_70px_rgba(0,0,0,0.55)] rounded-[32px] flex flex-col overflow-hidden relative">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,#1f2937,transparent_65%)] opacity-70"></div>
+          
+          {/* Mobile Close Button */}
+          <button 
+            onClick={onClose}
+            className="absolute top-4 right-4 z-20 p-2 text-slate-400 hover:text-white md:hidden"
+          >
+            <X size={20} />
+          </button>
+
+          <div className="relative z-10 p-8 pb-4">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-brand-pink via-fuchsia-500 to-cyan-400 flex items-center justify-center text-white font-bold text-xl shadow-[0_0_28px_rgba(244,37,123,0.45)]">
               FT
@@ -88,5 +117,6 @@ export function Sidebar({ activeTab, setActiveTab, onLogout }: SidebarProps) {
         </div>
       </div>
     </aside>
+    </>
   );
 }
