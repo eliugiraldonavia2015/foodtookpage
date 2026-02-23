@@ -67,11 +67,27 @@ export function LandingPage({ onAdminClick, onUserLoginClick, onRiderClick, onRe
       </div>
 
       {/* Navigation */}
+      {/* Mobile Floating Menu Button */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 0.5 }}
+        className="fixed top-6 right-6 z-50 md:hidden"
+      >
+        <button 
+          className="w-12 h-12 bg-white/90 backdrop-blur-md shadow-lg shadow-slate-200/50 rounded-full flex items-center justify-center text-slate-700 hover:text-brand-pink transition-colors border border-white/20"
+          onClick={() => setIsMobileMenuOpen(true)}
+        >
+          <Menu size={24} />
+        </button>
+      </motion.div>
+
+      {/* Desktop Header */}
       <motion.header 
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-        className="fixed top-0 left-0 right-0 z-50 flex justify-center pt-6 pointer-events-none px-4"
+        className="fixed top-0 left-0 right-0 z-50 hidden md:flex justify-center pt-6 pointer-events-none px-4"
       >
         <div className="bg-white/80 backdrop-blur-2xl border border-white/40 shadow-xl shadow-slate-200/50 rounded-full pl-6 pr-2 py-2 flex items-center justify-between gap-8 pointer-events-auto w-full max-w-5xl transition-all duration-300 hover:shadow-2xl hover:bg-white/90">
           
@@ -129,14 +145,6 @@ export function LandingPage({ onAdminClick, onUserLoginClick, onRiderClick, onRe
                 <ShieldCheck size={12} className="text-slate-300 group-hover:text-white transition-colors" />
               </div>
               <span>Admin</span>
-            </button>
-            
-            {/* Mobile Menu Button */}
-            <button 
-              className="md:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-full transition-colors ml-2"
-              onClick={() => setIsMobileMenuOpen(true)}
-            >
-              <Menu size={24} />
             </button>
           </div>
         </div>
