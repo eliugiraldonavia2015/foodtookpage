@@ -150,14 +150,14 @@ export function LandingPage({ onAdminClick, onUserLoginClick, onRiderClick, onRe
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsMobileMenuOpen(false)}
-              className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[60] md:hidden"
+              className="fixed top-[-50vh] left-[-50vw] w-[200vw] h-[200vh] bg-black/20 backdrop-blur-sm z-[60] md:hidden"
             />
             <motion.div
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed top-0 right-0 bottom-0 w-[280px] bg-white z-[70] shadow-2xl md:hidden flex flex-col p-6 overflow-y-auto"
+              className="fixed top-0 right-0 bottom-0 w-[280px] h-[100dvh] bg-white z-[70] shadow-2xl md:hidden flex flex-col p-6 pt-[calc(1.5rem+env(safe-area-inset-top))] pb-[calc(1.5rem+env(safe-area-inset-bottom))] overflow-y-auto"
             >
               <div className="flex items-center justify-between mb-8">
                  <div className="flex items-center gap-2">
