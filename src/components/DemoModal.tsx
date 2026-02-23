@@ -69,12 +69,14 @@ export function DemoModal({ isOpen, onClose, videoSrc }: DemoModalProps) {
                   <p className="text-xs md:text-base text-slate-400 max-w-[200px] md:max-w-md mx-auto leading-relaxed">
                     Aquí se reproducirá el video promocional.
                   </p>
-                  <button 
-                    onClick={() => setIsLoading(false)} // Simulate load complete
-                    className="mt-4 md:mt-6 px-4 py-2 md:px-6 bg-white/10 hover:bg-white/20 text-white rounded-full text-xs md:text-sm font-medium transition-colors"
-                  >
-                    Simular Carga
-                  </button>
+                  {isLoading && (
+                    <button 
+                      onClick={() => setIsLoading(false)} // Simulate load complete
+                      className="mt-4 md:mt-6 px-4 py-2 md:px-6 bg-white/10 hover:bg-white/20 text-white rounded-full text-xs md:text-sm font-medium transition-colors"
+                    >
+                      Simular Carga
+                    </button>
+                  )}
                 </div>
               )}
             </div>
