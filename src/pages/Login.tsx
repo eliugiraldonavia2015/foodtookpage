@@ -1,7 +1,9 @@
-import { useState, FormEvent, ChangeEvent, useEffect } from 'react';
-import { motion } from 'motion/react';
-import { User, Lock, ArrowRight, Loader2, ArrowLeft } from 'lucide-react';
+import { useState, FormEvent, useEffect, ChangeEvent } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { User, Lock, ArrowRight, Loader2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { HonoraryMention } from '../components/HonoraryMention';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../firebase';
 
 interface LoginProps {
   onLogin: (email: string) => void;
@@ -17,10 +19,12 @@ export function Login({ onLogin, onBack }: LoginProps) {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showHonoraryMention, setShowHonoraryMention] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError(null);
 
     if (email === 'josevillavicencio@foodtook.com' && password === 'JOSE2015') {
       setIsLoading(false);
@@ -28,11 +32,23 @@ export function Login({ onLogin, onBack }: LoginProps) {
       return;
     }
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
       onLogin(email);
+    } catch (err: any) {
+      console.error("Login error:", err);
+      if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+        setError('Usuario o contraseña incorrectos.');
+      } else if (err.code === 'auth/invalid-email') {
+        setError('El formato del correo electrónico es inválido.');
+      } else if (err.code === 'auth/too-many-requests') {
+        setError('Demasiados intentos fallidos. Intenta más tarde.');
+      } else {
+        setError('Ocurrió un error al iniciar sesión. Intenta nuevamente.');
+      }
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   const handleHonoraryComplete = () => {
@@ -107,6 +123,13 @@ export function Login({ onLogin, onBack }: LoginProps) {
               />
             </div>
           </div>
+
+          {error && (
+            <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-xl text-sm flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
+              {error}
+            </div>
+          )}
 
           <button
             type="submit"

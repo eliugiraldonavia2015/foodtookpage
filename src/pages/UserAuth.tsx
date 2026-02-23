@@ -1,6 +1,8 @@
 import { useState, FormEvent, ChangeEvent, useEffect } from 'react';
-import { motion } from 'motion/react';
-import { User, Lock, ArrowRight, Loader2, ArrowLeft, Mail } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { User, Lock, ArrowRight, Loader2, ArrowLeft, Mail, Eye, EyeOff, CheckCircle, X, Smartphone, ShieldCheck } from 'lucide-react';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../firebase';
 
 interface UserAuthProps {
   onLogin: (email: string) => void;
@@ -12,20 +14,34 @@ export function UserAuth({ onLogin, onBack }: UserAuthProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
+    setError(null);
+
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
       onLogin(email);
+    } catch (err: any) {
+      console.error("User Login error:", err);
+      if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+        setError('Correo o contraseña incorrectos.');
+      } else if (err.code === 'auth/invalid-email') {
+        setError('El correo electrónico no es válido.');
+      } else {
+        setError('Error al iniciar sesión. Verifica tus datos.');
+      }
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -107,15 +123,28 @@ export function UserAuth({ onLogin, onBack }: UserAuthProps) {
             <div className="relative group">
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand-pink transition-colors" size={20} />
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 rounded-2xl bg-slate-50 border border-slate-200 focus:ring-2 focus:ring-brand-pink/20 focus:border-brand-pink outline-none text-slate-900 placeholder:text-slate-400 transition-all font-medium"
+                className="w-full pl-12 pr-12 py-4 rounded-2xl bg-slate-50 border border-slate-200 focus:ring-2 focus:ring-brand-pink/20 focus:border-brand-pink outline-none text-slate-900 placeholder:text-slate-400 transition-all font-medium"
                 placeholder="••••••••"
                 required
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
             </div>
           </div>
+
+          {error && (
+            <div className="bg-red-50 border border-red-100 text-red-500 px-4 py-3 rounded-2xl text-sm flex items-center gap-2 mt-2">
+              <span>{error}</span>
+            </div>
+          )}
 
           <button
             type="submit"
