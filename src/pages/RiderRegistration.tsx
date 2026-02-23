@@ -3,6 +3,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, Upload, Check, ChevronDown, FileText, MapPin, User, Mail, Phone, Building, CreditCard, Bike, Smartphone, Download, CheckCircle, Store, ArrowRight, Map, Locate, Search, X, HelpCircle, Car } from 'lucide-react';
 import PasswordInput from '../components/PasswordInput';
 import { Footer } from '../components/Footer';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
+import { auth, db } from '../firebase';
 
 interface RiderRegistrationProps {
   onBack: () => void;
@@ -316,8 +319,53 @@ export function RiderRegistration({ onBack }: RiderRegistrationProps) {
     );
   };
 
-  const handleSubmit = () => {
-    setIsSuccess(true);
+  const handleSubmit = async () => {
+    try {
+      setIsSuccess(false); // Reset success state
+      // 1. Create user in Firebase Auth
+      const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+      const user = userCredential.user;
+
+      // 2. Prepare user data for Firestore
+      const riderData = {
+        uid: user.uid,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phone: `${formData.phonePrefix}${formData.phoneNumber}`,
+        role: 'rider',
+        status: 'pending_approval', // Wait for admin approval
+        address: formData.address,
+        addressOwner: formData.addressOwner,
+        vehicle: {
+          type: formData.vehicleType,
+          plate: formData.plate,
+        },
+        // In a real app, you would upload files to Storage and save URLs here.
+        // For now, we just note that files were provided.
+        documentsProvided: Object.keys(formData.files).filter(k => formData.files[k] !== null),
+        createdAt: new Date().toISOString(),
+        idNumber: formData.idNumber,
+        city: formData.city
+      };
+
+      // 3. Save to Firestore "users" collection (same as iOS)
+      await setDoc(doc(db, "users", user.uid), riderData);
+
+      // 4. Create username mapping (optional, if your iOS app uses it)
+      // await setDoc(doc(db, "usernames", formData.email), { uid: user.uid });
+
+      setIsSuccess(true);
+    } catch (error: any) {
+      console.error("Error registering rider:", error);
+      let errorMsg = "Ocurrió un error al registrarse.";
+      if (error.code === 'auth/email-already-in-use') {
+        errorMsg = "El correo electrónico ya está registrado.";
+      } else if (error.code === 'auth/weak-password') {
+        errorMsg = "La contraseña es muy débil.";
+      }
+      alert(errorMsg); // Simple alert for now
+    }
   };
 
   const handleRequestHelp = () => {

@@ -2,8 +2,8 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  status: 'active' | 'inactive' | 'banned';
-  role: 'admin' | 'restaurant' | 'staff';
+  status: 'active' | 'inactive' | 'banned' | 'pending_approval';
+  role: 'admin' | 'restaurant' | 'staff' | 'rider' | 'user';
   staffRole?: 'Secretario' | 'Ventas' | 'Servicio al cliente' | 'Legal' | 'Financiero' | 'Inversor';
   joinedDate: string;
   phone?: string;

@@ -6,11 +6,13 @@ import { UserAuth } from './pages/UserAuth';
 import { RiderLandingPage } from './pages/RiderLandingPage';
 import { RiderRegistration } from './pages/RiderRegistration';
 import { RestaurantLandingPage } from './pages/RestaurantLandingPage';
+import { RestaurantRegistration } from './pages/RestaurantRegistration';
 import { UsersList } from './pages/Users';
 import { DishesList } from './pages/Dishes';
 import { DishRequests } from './pages/DishRequests';
 import { RestaurantRequests } from './pages/RestaurantRequests';
 import { Dashboard } from './pages/Dashboard';
+import { WelcomePage } from './pages/WelcomePage';
 import { User, Tab, Restaurant } from './types';
 import { Bell, Search, Settings, Download, Menu } from 'lucide-react';
 import { exportToCSV } from './utils/csvExport';
@@ -19,10 +21,14 @@ import {
   operationsKpis, qualityKpis, financeKpis, geoKpis,
   usersData 
 } from './data';
+import { auth, db } from './firebase';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 
 function App() {
   const [user, setUser] = useState<User | null>(null);
-  const [authMode, setAuthMode] = useState<'none' | 'user' | 'admin' | 'rider' | 'restaurant' | 'rider-registration'>('none');
+  const [isLoading, setIsLoading] = useState(true);
+  const [authMode, setAuthMode] = useState<'none' | 'user' | 'admin' | 'rider' | 'restaurant' | 'rider-registration' | 'restaurant-registration'>('none');
   const [activeTab, setActiveTab] = useState<Tab>('command-center');
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<string | null>(null);
   const [users, setUsers] = useState<(User | Restaurant)[]>(usersData);
@@ -31,34 +37,57 @@ function App() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // Monitor auth state
   useEffect(() => {
-    const storedUser = localStorage.getItem('foodtook_admin_user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        try {
+          // Fetch user data from Firestore
+          const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            setUser({
+              id: firebaseUser.uid,
+              email: firebaseUser.email || '',
+              role: (userData.role as User['role']) || 'user', // Default to user if no role
+              name: userData.firstName ? `${userData.firstName} ${userData.lastName}` : (userData.name || 'Usuario'),
+              status: (userData.status as User['status']) || 'active',
+              joinedDate: userData.createdAt || new Date().toISOString()
+            } as User);
+          } else {
+             // Fallback if no firestore doc
+             setUser({
+               id: firebaseUser.uid,
+               email: firebaseUser.email || '',
+               role: 'user',
+               name: firebaseUser.displayName || 'Usuario',
+               status: 'active',
+               joinedDate: new Date().toISOString()
+             });
+          }
+        } catch (error) {
+          console.error("Error fetching user profile:", error);
+        }
+      } else {
+        setUser(null);
+      }
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
     setSearchTerm('');
   }, [activeTab]);
 
-  const handleLogin = (email: string) => {
-    const newUser: User = {
-      id: 'admin',
-      name: 'Admin User',
-      email: email,
-      status: 'active',
-      role: 'admin',
-      joinedDate: new Date().toISOString()
-    };
-    localStorage.setItem('foodtook_admin_user', JSON.stringify(newUser));
-    setUser(newUser);
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('foodtook_admin_user');
-    setUser(null);
-    setAuthMode('none');
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      setAuthMode('none');
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
   };
 
   const handleToggleBan = (userId: string) => {
@@ -128,12 +157,20 @@ function App() {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-pink"></div>
+      </div>
+    );
+  }
+
   if (!user) {
     if (authMode === 'admin') {
-      return <Login onLogin={handleLogin} onBack={() => setAuthMode('none')} />;
+      return <Login onLogin={() => {}} onBack={() => setAuthMode('none')} />;
     }
     if (authMode === 'user') {
-      return <UserAuth onLogin={() => setAuthMode('none')} onBack={() => setAuthMode('none')} />;
+      return <UserAuth onLogin={() => {}} onBack={() => setAuthMode('none')} />;
     }
     if (authMode === 'rider') {
       return <RiderLandingPage onBack={() => setAuthMode('none')} onRegisterClick={() => setAuthMode('rider-registration')} />;
@@ -144,6 +181,10 @@ function App() {
     if (authMode === 'restaurant') {
       return <RestaurantLandingPage onBack={() => setAuthMode('none')} />;
     }
+    if (authMode === 'restaurant-registration') {
+        return <RestaurantRegistration onBack={() => setAuthMode('restaurant')} />;
+    }
+    
     return (
       <LandingPage 
         onAdminClick={() => setAuthMode('admin')} 
@@ -152,6 +193,12 @@ function App() {
         onRestaurantClick={() => setAuthMode('restaurant')}
       />
     );
+  }
+
+  // If user is logged in, show dashboard ONLY if admin. 
+  // Otherwise show Welcome Page.
+  if (user.role !== 'admin') {
+    return <WelcomePage user={user} onLogout={handleLogout} />;
   }
 
   const getPageTitle = () => {
