@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Sidebar } from './components/Sidebar';
 import { LandingPage } from './pages/LandingPage';
 import { Login } from './pages/Login';
+import { StaffLogin } from './pages/StaffLogin';
 import { UserAuth } from './pages/UserAuth';
 import { RiderLandingPage } from './pages/RiderLandingPage';
 import { RiderRegistration } from './pages/RiderRegistration';
@@ -198,10 +199,10 @@ function App() {
       }} variant="admin" />;
     }
     if (authMode === 'staff') {
-      return <Login onLogin={() => {}} onBack={() => {
+      return <StaffLogin onLogin={() => {}} onBack={() => {
         setAuthMode('none');
         navigate('/');
-      }} variant="staff" />;
+      }} />;
     }
     if (authMode === 'user') {
       return <UserAuth onLogin={() => {}} onBack={() => setAuthMode('none')} />;
