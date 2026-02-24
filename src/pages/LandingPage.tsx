@@ -21,13 +21,12 @@ const TikTokIcon = ({ size = 24, className = "" }: { size?: number, className?: 
 );
 
 interface LandingPageProps {
-  onAdminClick: () => void;
   onUserLoginClick: () => void;
   onRiderClick: () => void;
   onRestaurantClick: () => void;
 }
 
-export function LandingPage({ onAdminClick, onUserLoginClick, onRiderClick, onRestaurantClick }: LandingPageProps) {
+export function LandingPage({ onUserLoginClick, onRiderClick, onRestaurantClick }: LandingPageProps) {
   const [isDemoOpen, setIsDemoOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -120,16 +119,6 @@ export function LandingPage({ onAdminClick, onUserLoginClick, onRiderClick, onRe
             >
               Iniciar Sesión
             </button>
-            <div className="h-6 w-px bg-slate-200 hidden sm:block"></div>
-            <button 
-              onClick={onAdminClick}
-              className="pl-4 pr-5 py-2.5 rounded-full bg-slate-900 text-white font-bold hover:bg-slate-800 transition-all shadow-lg hover:shadow-xl active:scale-95 flex items-center gap-2 text-sm group border border-transparent hover:border-slate-700 hidden sm:flex"
-            >
-              <div className="w-5 h-5 bg-white/10 rounded-full flex items-center justify-center group-hover:bg-brand-pink group-hover:text-white transition-colors duration-300">
-                <ShieldCheck size={12} className="text-slate-300 group-hover:text-white transition-colors" />
-              </div>
-              <span>Admin Panel</span>
-            </button>
             {/* Mobile Menu Button */}
             <button 
               className="md:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-full transition-colors ml-2"
@@ -214,16 +203,6 @@ export function LandingPage({ onAdminClick, onUserLoginClick, onRiderClick, onRe
                   className="w-full py-3 rounded-xl font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-all text-sm"
                 >
                   Iniciar Sesión
-                </button>
-                <button 
-                  onClick={() => {
-                    onAdminClick();
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className="w-full py-3 rounded-xl bg-slate-900 text-white font-bold hover:bg-slate-800 transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2 text-sm"
-                >
-                  <ShieldCheck size={16} />
-                  <span>Admin Panel</span>
                 </button>
               </div>
             </motion.div>
@@ -668,7 +647,6 @@ export function LandingPage({ onAdminClick, onUserLoginClick, onRiderClick, onRe
             <p className="text-sm">© {new Date().getFullYear()} FoodTook Inc. Todos los derechos reservados.</p>
             <div className="flex gap-6 text-sm">
               <button onClick={onUserLoginClick} className="hover:text-white transition-colors">Iniciar Sesión</button>
-              <button onClick={onAdminClick} className="hover:text-white transition-colors">Admin Login</button>
             </div>
           </div>
         </div>

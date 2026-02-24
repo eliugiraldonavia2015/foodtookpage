@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Sidebar } from './components/Sidebar';
 import { LandingPage } from './pages/LandingPage';
 import { Login } from './pages/Login';
@@ -26,9 +27,11 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 
 function App() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [authMode, setAuthMode] = useState<'none' | 'user' | 'admin' | 'rider' | 'restaurant' | 'rider-registration' | 'restaurant-registration'>('none');
+  const [authMode, setAuthMode] = useState<'none' | 'user' | 'admin' | 'staff' | 'rider' | 'restaurant' | 'rider-registration' | 'restaurant-registration'>('none');
   const [activeTab, setActiveTab] = useState<Tab>('command-center');
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<string | null>(null);
   const [users, setUsers] = useState<(User | Restaurant)[]>(usersData);
@@ -38,6 +41,14 @@ function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Monitor auth state
+  useEffect(() => {
+    if (location.pathname === '/asdtyucvb') {
+      setAuthMode('admin');
+    } else if (location.pathname === '/staff') {
+      setAuthMode('staff');
+    }
+  }, [location.pathname]);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
@@ -98,6 +109,7 @@ function App() {
     try {
       await signOut(auth);
       setAuthMode('none');
+      navigate('/');
     } catch (error) {
       console.error("Error signing out:", error);
     }
@@ -180,7 +192,16 @@ function App() {
 
   if (!user) {
     if (authMode === 'admin') {
-      return <Login onLogin={() => {}} onBack={() => setAuthMode('none')} />;
+      return <Login onLogin={() => {}} onBack={() => {
+        setAuthMode('none');
+        navigate('/');
+      }} />;
+    }
+    if (authMode === 'staff') {
+      return <Login onLogin={() => {}} onBack={() => {
+        setAuthMode('none');
+        navigate('/');
+      }} />;
     }
     if (authMode === 'user') {
       return <UserAuth onLogin={() => {}} onBack={() => setAuthMode('none')} />;
@@ -200,7 +221,6 @@ function App() {
     
     return (
       <LandingPage 
-        onAdminClick={() => setAuthMode('admin')} 
         onUserLoginClick={() => setAuthMode('user')} 
         onRiderClick={() => setAuthMode('rider')}
         onRestaurantClick={() => setAuthMode('restaurant')}

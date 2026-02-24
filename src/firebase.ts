@@ -23,4 +23,7 @@ export const auth = getAuth(app);
 // Si esto falla, podemos probar con getFirestore(app) que usa la default.
 export const db = initializeFirestore(app, {}, "logincloud");
 
+// Conexión a la base de datos 'ghkm' para Admins y Staff
+export const dbAdmin = initializeFirestore(app, {}, "ghkm");
+
 export default app;
