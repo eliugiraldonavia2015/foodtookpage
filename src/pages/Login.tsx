@@ -2,8 +2,9 @@ import { useState, FormEvent, useEffect, ChangeEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Lock, ArrowRight, Loader2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { HonoraryMention } from '../components/HonoraryMention';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../firebase';
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { auth, dbAdmin } from '../firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 
 interface LoginProps {
   onLogin: (email: string) => void;
@@ -35,10 +36,30 @@ export function Login({ onLogin, onBack, variant = 'admin' }: LoginProps) {
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
+
+      // Verificación Estricta para Admins
+      if (variant === 'admin') {
+         const adminQuery = query(collection(dbAdmin, "mandar"), where("email", "==", email));
+         const adminSnapshot = await getDocs(adminQuery);
+
+         if (adminSnapshot.empty) {
+            await signOut(auth);
+            throw new Error("unauthorized-admin");
+         }
+
+         const adminData = adminSnapshot.docs[0].data();
+         if (adminData.role !== 'admin') {
+            await signOut(auth);
+            throw new Error("unauthorized-admin-role");
+         }
+      }
+
       onLogin(email);
     } catch (err: any) {
       console.error("Login error:", err);
-      if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+      if (err.message === 'unauthorized-admin' || err.message === 'unauthorized-admin-role') {
+         setError('Cuenta no autorizada para administración.');
+      } else if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
         setError('Usuario o contraseña incorrectos.');
       } else if (err.code === 'auth/invalid-email') {
         setError('El formato del correo electrónico es inválido.');

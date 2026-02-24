@@ -23,9 +23,10 @@ import {
   operationsKpis, qualityKpis, financeKpis, geoKpis,
   usersData 
 } from './data';
-import { auth, db } from './firebase';
+import { StaffDashboard } from './pages/StaffDashboard';
+import { auth, db, dbAdmin } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 
 function App() {
   const location = useLocation();
@@ -55,8 +56,9 @@ function App() {
       if (firebaseUser) {
         try {
           console.log("Usuario autenticado:", firebaseUser.email);
-          // Fetch user data from Firestore
+          // Fetch user data from Firestore (Standard Users)
           const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
+          
           if (userDoc.exists()) {
             console.log("Datos de usuario encontrados en Firestore");
             const userData = userDoc.data();
@@ -69,16 +71,53 @@ function App() {
               joinedDate: userData.createdAt || new Date().toISOString()
             } as User);
           } else {
-             console.warn("Usuario autenticado pero NO encontrado en Firestore (users collection)");
-             // Fallback if no firestore doc
-             setUser({
-               id: firebaseUser.uid,
-               email: firebaseUser.email || '',
-               role: 'user', // Default Role
-               name: firebaseUser.displayName || 'Usuario',
-               status: 'active',
-               joinedDate: new Date().toISOString()
-             });
+             // Try to find in 'staff' collection (dbAdmin)
+             console.log("Buscando en colección Staff...");
+             const staffQuery = query(collection(dbAdmin, "staff"), where("email", "==", firebaseUser.email));
+             const staffSnapshot = await getDocs(staffQuery);
+
+             if (!staffSnapshot.empty) {
+                const staffData = staffSnapshot.docs[0].data();
+                console.log("Usuario encontrado en Staff:", staffData);
+                setUser({
+                  id: firebaseUser.uid,
+                  email: firebaseUser.email || '',
+                  role: staffData.role === 'admin' ? 'admin' : 'staff', 
+                  staffRole: staffData.role,
+                  name: staffData.name || 'Staff Member',
+                  status: (staffData.state as User['status']) || 'active',
+                  joinedDate: new Date().toISOString()
+                } as User);
+             } else {
+                // Try to find in 'mandar' collection (Admin DB)
+                console.log("Buscando en colección Mandar (Admin)...");
+                const adminQuery = query(collection(dbAdmin, "mandar"), where("email", "==", firebaseUser.email));
+                const adminSnapshot = await getDocs(adminQuery);
+
+                if (!adminSnapshot.empty) {
+                   const adminData = adminSnapshot.docs[0].data();
+                   console.log("Usuario encontrado en Mandar (Admin):", adminData);
+                   setUser({
+                      id: firebaseUser.uid,
+                      email: firebaseUser.email || '',
+                      role: 'admin',
+                      name: adminData.name || 'Admin',
+                      status: (adminData.state as User['status']) || 'active',
+                      joinedDate: new Date().toISOString()
+                   } as User);
+                } else {
+                   console.warn("Usuario autenticado pero NO encontrado en ninguna colección");
+                   // Fallback if no firestore doc found anywhere
+                   setUser({
+                     id: firebaseUser.uid,
+                     email: firebaseUser.email || '',
+                     role: 'user', // Default Role
+                     name: firebaseUser.displayName || 'Usuario',
+                     status: 'active',
+                     joinedDate: new Date().toISOString()
+                   });
+                }
+             }
           }
         } catch (error) {
           console.error("Error fetching user profile from Firestore:", error);
@@ -231,6 +270,10 @@ function App() {
 
   // If user is logged in, show dashboard ONLY if admin. 
   // Otherwise show Welcome Page.
+  if (user.role === 'staff') {
+    return <StaffDashboard role={user.staffRole || 'Staff'} email={user.email} onLogout={handleLogout} />;
+  }
+
   if (user.role !== 'admin') {
     return <WelcomePage user={user} onLogout={handleLogout} />;
   }

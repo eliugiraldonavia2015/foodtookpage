@@ -1,8 +1,9 @@
 import { useState, FormEvent, useEffect, ChangeEvent } from 'react';
 import { motion } from 'motion/react';
 import { User, Lock, ArrowRight, Loader2, ArrowLeft } from 'lucide-react';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../firebase';
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { auth, dbAdmin } from '../firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 
 interface StaffLoginProps {
   onLogin: (email: string) => void;
@@ -26,10 +27,30 @@ export function StaffLogin({ onLogin, onBack }: StaffLoginProps) {
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
+      
+      // Verificación adicional de seguridad para Staff
+      const staffQuery = query(collection(dbAdmin, "staff"), where("email", "==", email));
+      const staffSnapshot = await getDocs(staffQuery);
+
+      if (staffSnapshot.empty) {
+        await signOut(auth);
+        throw new Error("unauthorized-staff");
+      }
+
+      const staffData = staffSnapshot.docs[0].data();
+
+      // Si es admin, rechazar acceso en este portal
+      if (staffData.role === 'admin') {
+        await signOut(auth);
+        throw new Error("admin-restricted");
+      }
+
       onLogin(email);
     } catch (err: any) {
       console.error("Login error:", err);
-      if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+      if (err.message === 'unauthorized-staff' || err.message === 'admin-restricted') {
+         setError('Cuenta no reconocida o no autorizada para este portal.');
+      } else if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
         setError('Credenciales inválidas.');
       } else if (err.code === 'auth/invalid-email') {
         setError('Correo inválido.');
