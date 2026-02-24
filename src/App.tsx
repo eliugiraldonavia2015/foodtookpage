@@ -195,13 +195,13 @@ function App() {
       return <Login onLogin={() => {}} onBack={() => {
         setAuthMode('none');
         navigate('/');
-      }} />;
+      }} variant="admin" />;
     }
     if (authMode === 'staff') {
       return <Login onLogin={() => {}} onBack={() => {
         setAuthMode('none');
         navigate('/');
-      }} />;
+      }} variant="staff" />;
     }
     if (authMode === 'user') {
       return <UserAuth onLogin={() => {}} onBack={() => setAuthMode('none')} />;
