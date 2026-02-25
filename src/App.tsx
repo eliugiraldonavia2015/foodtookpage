@@ -33,7 +33,7 @@ function App() {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [authMode, setAuthMode] = useState<'none' | 'user' | 'admin' | 'staff' | 'rider' | 'restaurant' | 'rider-registration' | 'restaurant-registration'>('none');
+  const [authMode, setAuthMode] = useState<'none' | 'user' | 'admin' | 'staff' | 'rider' | 'restaurant' | 'rider-registration' | 'restaurant-registration' | 'rider-login' | 'restaurant-login'>('none');
   const [activeTab, setActiveTab] = useState<Tab>('command-center');
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<string | null>(null);
   const [users, setUsers] = useState<(User | Restaurant)[]>(usersData);
@@ -247,16 +247,22 @@ function App() {
       return <UserAuth onLogin={() => {}} onBack={() => setAuthMode('none')} />;
     }
     if (authMode === 'rider') {
-      return <RiderLandingPage onBack={() => setAuthMode('none')} onRegisterClick={() => setAuthMode('rider-registration')} />;
+      return <RiderLandingPage onBack={() => setAuthMode('none')} onRegisterClick={() => setAuthMode('rider-registration')} onLoginClick={() => setAuthMode('rider-login')} />;
     }
     if (authMode === 'rider-registration') {
       return <RiderRegistration onBack={() => setAuthMode('rider')} />;
     }
+    if (authMode === 'rider-login') {
+      return <UserAuth onLogin={() => {}} onBack={() => setAuthMode('rider')} variant="rider" />;
+    }
     if (authMode === 'restaurant') {
-      return <RestaurantLandingPage onBack={() => setAuthMode('none')} />;
+      return <RestaurantLandingPage onBack={() => setAuthMode('none')} onLoginClick={() => setAuthMode('restaurant-login')} />;
     }
     if (authMode === 'restaurant-registration') {
         return <RestaurantRegistration onBack={() => setAuthMode('restaurant')} />;
+    }
+    if (authMode === 'restaurant-login') {
+      return <UserAuth onLogin={() => {}} onBack={() => setAuthMode('restaurant')} variant="restaurant" />;
     }
     
     return (

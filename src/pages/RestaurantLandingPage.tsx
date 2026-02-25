@@ -5,9 +5,10 @@ import { RestaurantRegistration } from './RestaurantRegistration';
 
 interface RestaurantLandingPageProps {
   onBack: () => void;
+  onLoginClick: () => void;
 }
 
-export function RestaurantLandingPage({ onBack }: RestaurantLandingPageProps) {
+export function RestaurantLandingPage({ onBack, onLoginClick }: RestaurantLandingPageProps) {
   const [isRegistering, setIsRegistering] = useState(false);
 
   useEffect(() => {
@@ -36,13 +37,21 @@ export function RestaurantLandingPage({ onBack }: RestaurantLandingPageProps) {
           <span className="font-bold text-xl tracking-tight text-slate-900">FoodTook Partner</span>
         </div>
         
-        <button 
-          onClick={onBack}
-          className="flex items-center gap-2 px-4 py-2 rounded-full font-medium text-slate-600 hover:text-orange-500 hover:bg-orange-500/5 transition-all"
-        >
-          <ArrowLeft size={18} />
-          <span>Volver al inicio</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={onLoginClick}
+            className="hidden sm:inline-flex px-4 py-2 rounded-full font-medium text-orange-500 hover:bg-orange-500/5 transition-all"
+          >
+            Iniciar Sesión
+          </button>
+          <button 
+            onClick={onBack}
+            className="flex items-center gap-2 px-4 py-2 rounded-full font-medium text-slate-600 hover:text-orange-500 hover:bg-orange-500/5 transition-all"
+          >
+            <ArrowLeft size={18} />
+            <span>Volver al inicio</span>
+          </button>
+        </div>
       </nav>
 
       {/* Hero Section */}

@@ -6,9 +6,10 @@ import { Footer } from '../components/Footer';
 interface RiderLandingPageProps {
   onBack: () => void;
   onRegisterClick: () => void;
+  onLoginClick: () => void;
 }
 
-export function RiderLandingPage({ onBack, onRegisterClick }: RiderLandingPageProps) {
+export function RiderLandingPage({ onBack, onRegisterClick, onLoginClick }: RiderLandingPageProps) {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
@@ -31,13 +32,21 @@ export function RiderLandingPage({ onBack, onRegisterClick }: RiderLandingPagePr
           <span className="font-bold text-xl tracking-tight text-slate-900">FoodTook Riders</span>
         </div>
         
-        <button 
-          onClick={onBack}
-          className="flex items-center gap-2 px-4 py-2 rounded-full font-medium text-slate-600 hover:text-brand-green hover:bg-brand-green/5 transition-all"
-        >
-          <ArrowLeft size={18} />
-          <span className="hidden sm:inline">Volver al inicio</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={onLoginClick}
+            className="hidden sm:inline-flex px-4 py-2 rounded-full font-medium text-brand-green hover:bg-brand-green/5 transition-all"
+          >
+            Iniciar Sesión
+          </button>
+          <button 
+            onClick={onBack}
+            className="flex items-center gap-2 px-4 py-2 rounded-full font-medium text-slate-600 hover:text-brand-green hover:bg-brand-green/5 transition-all"
+          >
+            <ArrowLeft size={18} />
+            <span className="hidden sm:inline">Volver al inicio</span>
+          </button>
+        </div>
       </nav>
 
       {/* Hero Section */}
