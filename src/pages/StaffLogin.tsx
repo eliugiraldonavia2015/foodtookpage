@@ -39,6 +39,12 @@ export function StaffLogin({ onLogin, onBack }: StaffLoginProps) {
 
       const staffData = staffSnapshot.docs[0].data();
 
+      // Validación de estado de cuenta
+      if (staffData.state !== 'active') {
+        await signOut(auth);
+        throw new Error("account-disabled");
+      }
+
       // Si es admin, rechazar acceso en este portal
       if (staffData.role === 'admin') {
         await signOut(auth);
@@ -50,6 +56,8 @@ export function StaffLogin({ onLogin, onBack }: StaffLoginProps) {
       console.error("Login error:", err);
       if (err.message === 'unauthorized-staff' || err.message === 'admin-restricted') {
          setError('Cuenta no reconocida o no autorizada para este portal.');
+      } else if (err.message === 'account-disabled') {
+         setError('Esta cuenta ha sido deshabilitada. Contacte al administrador.');
       } else if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
         setError('Credenciales inválidas.');
       } else if (err.code === 'auth/invalid-email') {

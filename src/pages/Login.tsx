@@ -48,6 +48,13 @@ export function Login({ onLogin, onBack, variant = 'admin' }: LoginProps) {
          }
 
          const adminData = adminSnapshot.docs[0].data();
+         
+         // Validación de estado de cuenta Admin
+         if (adminData.state !== 'active') {
+            await signOut(auth);
+            throw new Error("account-disabled");
+         }
+
          if (adminData.role !== 'admin') {
             await signOut(auth);
             throw new Error("unauthorized-admin-role");
@@ -59,6 +66,8 @@ export function Login({ onLogin, onBack, variant = 'admin' }: LoginProps) {
       console.error("Login error:", err);
       if (err.message === 'unauthorized-admin' || err.message === 'unauthorized-admin-role') {
          setError('Cuenta no autorizada para administración.');
+      } else if (err.message === 'account-disabled') {
+         setError('Esta cuenta ha sido deshabilitada. Contacte al administrador.');
       } else if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
         setError('Usuario o contraseña incorrectos.');
       } else if (err.code === 'auth/invalid-email') {

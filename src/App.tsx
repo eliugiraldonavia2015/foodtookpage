@@ -277,7 +277,7 @@ function App() {
   // If user is logged in, show dashboard ONLY if admin. 
   // Otherwise show Welcome Page.
   if (user.role === 'staff') {
-    return <StaffDashboard role={user.staffRole || 'Staff'} email={user.email} onLogout={handleLogout} />;
+    return <StaffDashboard name={user.name} role={user.staffRole || 'Staff'} email={user.email} state={user.status} onLogout={handleLogout} />;
   }
 
   if (user.role !== 'admin') {
