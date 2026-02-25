@@ -33,7 +33,8 @@ function App() {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [authMode, setAuthMode] = useState<'none' | 'user' | 'admin' | 'staff' | 'rider' | 'restaurant' | 'rider-registration' | 'restaurant-registration' | 'rider-login' | 'restaurant-login'>('none');
+  const [authMode, setAuthMode] = useState<'none' | 'user' | 'admin' | 'staff' | 'rider' | 'restaurant' | 'rider-registration' | 'restaurant-registration' | 'rider-login' | 'restaurant-login' | 'restaurant-registration-resume'>('none');
+  const [resumeData, setResumeData] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<Tab>('command-center');
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<string | null>(null);
   const [users, setUsers] = useState<(User | Restaurant)[]>(usersData);
@@ -308,7 +309,23 @@ function App() {
         return <RestaurantRegistration onBack={() => setAuthMode('restaurant')} />;
     }
     if (authMode === 'restaurant-login') {
-      return <UserAuth onLogin={() => {}} onBack={() => setAuthMode('restaurant')} variant="restaurant" />;
+      return <UserAuth 
+        onLogin={() => {
+          // Login normal si no hay borrador
+          setAuthMode('restaurant');
+        }} 
+        onBack={() => setAuthMode('restaurant')} 
+        variant="restaurant" 
+        onResumeRegistration={(data) => {
+          // Pasamos los datos al componente de registro
+          setResumeData(data);
+          setAuthMode('restaurant-registration-resume');
+        }}
+      />;
+    }
+    
+    if (authMode === 'restaurant-registration-resume') {
+        return <RestaurantRegistration onBack={() => setAuthMode('restaurant')} initialData={resumeData} />;
     }
     
     return (

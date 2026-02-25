@@ -11,6 +11,7 @@ import { Save } from 'lucide-react';
 
 interface RestaurantRegistrationProps {
   onBack: () => void;
+  initialData?: any;
 }
 // ... rest of the imports
 
@@ -296,11 +297,57 @@ const ScrollIndicator = () => {
   );
 };
 
-export function RestaurantRegistration({ onBack }: RestaurantRegistrationProps) {
+const DraftSavedScreen = ({ ownerName, onContinue }: { ownerName: string, onContinue: () => void }) => {
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="flex flex-col items-center justify-center text-center p-8 max-w-2xl mx-auto min-h-screen"
+    >
+      <motion.div
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        transition={{ type: "spring", stiffness: 200, damping: 15 }}
+        className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mb-8 relative"
+      >
+        <Save size={48} className="text-blue-600" />
+      </motion.div>
+
+      <h2 className="text-3xl font-bold text-slate-900 mb-4">
+        ¡Hola de nuevo, {ownerName.split(' ')[0]}!
+      </h2>
+      
+      <p className="text-xl text-slate-600 mb-8 leading-relaxed">
+        Tu progreso está seguro con nosotros. <br/>
+        Hemos recuperado tu información para que continúes exactamente donde te quedaste.
+      </p>
+
+      <div className="bg-blue-50 border border-blue-100 rounded-2xl p-6 mb-8 w-full text-left">
+        <h4 className="font-bold text-blue-900 mb-2 flex items-center gap-2">
+          <CheckCircle size={18} className="text-blue-600" />
+          Estado del Registro
+        </h4>
+        <p className="text-blue-700 text-sm">
+          Tus datos básicos y ubicación están guardados. Puedes revisarlos o continuar con la documentación.
+        </p>
+      </div>
+
+      <button 
+        onClick={onContinue}
+        className="px-8 py-4 bg-blue-600 text-white font-bold rounded-2xl shadow-xl shadow-blue-500/30 hover:bg-blue-700 hover:shadow-blue-500/40 transition-all active:scale-95 flex items-center gap-2"
+      >
+        Continuar Registro
+        <ArrowRight size={20} />
+      </button>
+    </motion.div>
+  );
+};
+
+export function RestaurantRegistration({ onBack, initialData }: RestaurantRegistrationProps) {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
-  const [step, setStep] = useState(0); // 0 = Choice Screen, 1-3 = Registration Steps
+  const [step, setStep] = useState(initialData ? 1 : 0); // 0 = Choice Screen, 1-3 = Registration Steps
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isHelpRequested, setIsHelpRequested] = useState(false);
@@ -309,25 +356,41 @@ export function RestaurantRegistration({ onBack }: RestaurantRegistrationProps) 
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   
+  const [isDraftSaved, setIsDraftSaved] = useState(false);
+  
   // Scroll to top when step changes or success screen is shown
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, [step, isSuccess]);
+  }, [step, isSuccess, isDraftSaved]);
 
   const [formData, setFormData] = useState({
-    restaurantName: '',
-    ruc: '',
-    ownerName: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    phonePrefix: '+593',
-    phoneNumber: '',
-    country: 'Ecuador',
-    province: '',
-    address: '',
+    restaurantName: initialData?.restaurantName || '',
+    ruc: initialData?.ruc || '',
+    ownerName: initialData?.ownerName || '',
+    email: initialData?.email || '',
+    password: initialData?.password || '', // Contraseña en texto plano si se guardó, de lo contrario vacía
+    confirmPassword: initialData?.password || '',
+    phonePrefix: initialData?.phonePrefix || '+593',
+    phoneNumber: initialData?.phoneNumber || '',
+    country: initialData?.country || 'Ecuador',
+    province: initialData?.province || '',
+    address: initialData?.address || '',
     files: {} as Record<string, File | null>
   });
+
+  // Si tenemos initialData, mostrar mensaje de bienvenida
+  const [showWelcomeBack, setShowWelcomeBack] = useState(!!initialData);
+
+  if (showWelcomeBack && initialData) {
+    return (
+      <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-orange-500 selection:text-white relative overflow-y-auto">
+        <DraftSavedScreen 
+          ownerName={initialData.ownerName || 'Partner'} 
+          onContinue={() => setShowWelcomeBack(false)} 
+        />
+      </div>
+    );
+  }
 
   const handleFileChange = (docId: string, file: File | null) => {
     setFormData(prev => ({
@@ -501,7 +564,7 @@ export function RestaurantRegistration({ onBack }: RestaurantRegistrationProps) 
 
       await setDoc(draftRef, dataToSave, { merge: true });
 
-      alert("Progreso guardado correctamente. Puedes volver cuando quieras iniciando sesión.");
+      setIsDraftSaved(true);
     } catch (error: any) {
       console.error("Error guardando borrador:", error);
       alert("Error al guardar: " + error.message);
@@ -521,6 +584,20 @@ export function RestaurantRegistration({ onBack }: RestaurantRegistrationProps) 
     setStep(s => Math.min(s + 1, 3));
   };
   const prevStep = () => setStep(s => Math.max(s - 1, 1));
+
+  if (isDraftSaved) {
+    return (
+      <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-orange-500 selection:text-white relative overflow-y-auto">
+         <DraftSavedScreen 
+           ownerName={formData.ownerName} 
+           onContinue={() => {
+             setIsDraftSaved(false);
+             setStep(step); // Mantiene el paso actual
+           }} 
+         />
+      </div>
+    );
+  }
 
   if (isSuccess) {
     return (

@@ -10,13 +10,18 @@ interface RestaurantLandingPageProps {
 
 export function RestaurantLandingPage({ onBack, onLoginClick }: RestaurantLandingPageProps) {
   const [isRegistering, setIsRegistering] = useState(false);
+  // Nuevo estado para controlar si estamos reanudando un registro
+  const [resumeData, setResumeData] = useState<any>(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [isRegistering]);
 
   if (isRegistering) {
-    return <RestaurantRegistration onBack={() => setIsRegistering(false)} />;
+    return <RestaurantRegistration onBack={() => {
+      setIsRegistering(false);
+      setResumeData(null);
+    }} initialData={resumeData} />;
   }
 
   return (

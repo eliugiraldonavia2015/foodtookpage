@@ -2,15 +2,17 @@ import { useState, FormEvent, ChangeEvent, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Lock, ArrowRight, Loader2, ArrowLeft, Mail, Eye, EyeOff, CheckCircle, X, Smartphone, ShieldCheck } from 'lucide-react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../firebase';
 
 interface UserAuthProps {
   onLogin: (email: string) => void;
   onBack: () => void;
   variant?: 'user' | 'rider' | 'restaurant';
+  onResumeRegistration?: (data: any) => void;
 }
 
-export function UserAuth({ onLogin, onBack, variant = 'user' }: UserAuthProps) {
+export function UserAuth({ onLogin, onBack, variant = 'user', onResumeRegistration }: UserAuthProps) {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -71,7 +73,21 @@ export function UserAuth({ onLogin, onBack, variant = 'user' }: UserAuthProps) {
     setError(null);
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      
+      // Si es restaurante, verificar si tiene un borrador pendiente
+      if (variant === 'restaurant' && onResumeRegistration) {
+        const draftDoc = await getDoc(doc(db, "restaurant_requests", userCredential.user.uid));
+        if (draftDoc.exists()) {
+          const data = draftDoc.data();
+          if (data.status === 'draft') {
+            console.log("Borrador encontrado, reanudando registro...");
+            onResumeRegistration(data);
+            return; // Detenemos aquí para que no haga el onLogin normal
+          }
+        }
+      }
+
       onLogin(email);
     } catch (err: any) {
       console.error("User Login error:", err);
