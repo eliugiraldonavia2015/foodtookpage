@@ -297,6 +297,65 @@ const ScrollIndicator = () => {
   );
 };
 
+const ProgressSavedScreen = ({ ownerName, onContinue, onLogout }: { ownerName: string, onContinue: () => void, onLogout: () => void }) => {
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="flex flex-col items-center justify-center text-center p-8 max-w-2xl mx-auto min-h-screen"
+    >
+      <motion.div
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        transition={{ type: "spring", stiffness: 200, damping: 15 }}
+        className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mb-8 relative"
+      >
+        <Save size={48} className="text-green-600" />
+      </motion.div>
+
+      <h2 className="text-3xl font-bold text-slate-900 mb-4">
+        ¡Progreso Guardado, {ownerName.split(' ')[0]}!
+      </h2>
+      
+      <p className="text-xl text-slate-600 mb-8 leading-relaxed">
+        Tus datos han sido almacenados correctamente. <br/>
+        Esperamos verte de nuevo pronto para completar tu registro.
+      </p>
+
+      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 mb-8 w-full text-left">
+        <h4 className="font-bold text-slate-900 mb-2 flex items-center gap-2">
+          <HelpCircle size={18} className="text-orange-500" />
+          ¿Necesitas ayuda?
+        </h4>
+        <p className="text-slate-600 text-sm mb-2">
+          Si tienes problemas para completar tu registro, contáctanos:
+        </p>
+        <ul className="text-sm text-slate-700 space-y-1 ml-6 list-disc">
+          <li>Soporte: <strong>soporte@foodtook.com</strong></li>
+          <li>WhatsApp: <strong>+593 99 999 9999</strong></li>
+        </ul>
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
+        <button 
+          onClick={onContinue}
+          className="px-8 py-4 bg-slate-100 text-slate-700 font-bold rounded-2xl hover:bg-slate-200 transition-all active:scale-95 flex items-center justify-center gap-2"
+        >
+          Seguir Editando
+        </button>
+        
+        <button 
+          onClick={onLogout}
+          className="px-8 py-4 bg-slate-900 text-white font-bold rounded-2xl shadow-xl shadow-slate-900/20 hover:bg-slate-800 transition-all active:scale-95 flex items-center justify-center gap-2"
+        >
+          Cerrar Sesión
+          <ArrowRight size={20} />
+        </button>
+      </div>
+    </motion.div>
+  );
+};
+
 const DraftSavedScreen = ({ ownerName, onContinue }: { ownerName: string, onContinue: () => void }) => {
   return (
     <motion.div
@@ -521,22 +580,18 @@ export function RestaurantRegistration({ onBack, initialData }: RestaurantRegist
 
     setIsSaving(true);
     try {
-      // 1. Obtener usuario (usar actual si coincide, o autenticar)
-      let user = auth.currentUser;
-      const isCurrentUser = user && user.email === formData.email;
-
-      if (!isCurrentUser) {
-        try {
-          const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
-          user = userCredential.user;
-        } catch (authError: any) {
-          if (authError.code === 'auth/email-already-in-use') {
-             // Intentar login silencioso o pedir login
-             const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
-             user = userCredential.user;
-          } else {
-             throw authError;
-          }
+      // 1. Crear usuario en Auth (o loguear si ya existe)
+      let user;
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+        user = userCredential.user;
+      } catch (authError: any) {
+        if (authError.code === 'auth/email-already-in-use') {
+           // Intentar login silencioso o pedir login
+           const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
+           user = userCredential.user;
+        } else {
+           throw authError;
         }
       }
 
@@ -577,8 +632,8 @@ export function RestaurantRegistration({ onBack, initialData }: RestaurantRegist
 
       await setDoc(draftRef, dataToSave, { merge: true });
 
-      // Cerrar sesión para asegurar que no quede usuario autenticado
-      await signOut(auth);
+      // No cerramos sesión aquí automáticamente, dejamos que el usuario lo haga manualmente en la pantalla de éxito
+      // await signOut(auth);
 
       setIsDraftSaved(true);
     } catch (error: any) {
@@ -604,12 +659,20 @@ export function RestaurantRegistration({ onBack, initialData }: RestaurantRegist
   if (isDraftSaved) {
     return (
       <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-orange-500 selection:text-white relative overflow-y-auto">
-         <DraftSavedScreen 
+         <ProgressSavedScreen 
            ownerName={formData.ownerName} 
            onContinue={() => {
              setIsDraftSaved(false);
              setStep(step); // Mantiene el paso actual
            }} 
+           onLogout={async () => {
+              try {
+                await signOut(auth);
+                window.location.reload(); // Recargar para asegurar que el estado se limpie completamente y vuelva al inicio
+              } catch (error) {
+                console.error("Error signing out", error);
+              }
+           }}
          />
       </div>
     );
