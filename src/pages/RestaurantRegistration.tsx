@@ -347,7 +347,31 @@ export function RestaurantRegistration({ onBack, initialData }: RestaurantRegist
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
-  const [step, setStep] = useState(initialData ? 1 : 0); // 0 = Choice Screen, 1-3 = Registration Steps
+  // Sanear datos iniciales de forma robusta
+  const safeInitialData = initialData || {};
+  
+  const [formData, setFormData] = useState({
+    restaurantName: safeInitialData.restaurantName || '',
+    ruc: safeInitialData.ruc || '',
+    ownerName: safeInitialData.ownerName || '',
+    email: safeInitialData.email || '',
+    password: safeInitialData.password || '', 
+    confirmPassword: safeInitialData.password || '',
+    phonePrefix: safeInitialData.phonePrefix || '+593',
+    phoneNumber: safeInitialData.phoneNumber || '',
+    country: safeInitialData.country || 'Ecuador',
+    province: safeInitialData.province || '',
+    address: safeInitialData.address || '',
+    files: {} as Record<string, File | null> // Los archivos no se pueden recuperar tal cual, se deben volver a subir o manejar aparte
+  });
+
+  // Estado del paso: Si hay datos recuperados, empezamos en el paso 1 (Formulario), si no, en 0 (Elección)
+  // Usamos una función de inicialización perezosa para asegurar consistencia
+  const [step, setStep] = useState(() => initialData ? 1 : 0); 
+
+  // Si tenemos initialData, mostrar mensaje de bienvenida
+  const [showWelcomeBack, setShowWelcomeBack] = useState(!!initialData);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isHelpRequested, setIsHelpRequested] = useState(false);
@@ -363,30 +387,16 @@ export function RestaurantRegistration({ onBack, initialData }: RestaurantRegist
     window.scrollTo(0, 0);
   }, [step, isSuccess, isDraftSaved]);
 
-  const [formData, setFormData] = useState({
-    restaurantName: initialData?.restaurantName || '',
-    ruc: initialData?.ruc || '',
-    ownerName: initialData?.ownerName || '',
-    email: initialData?.email || '',
-    password: initialData?.password || '', // Contraseña en texto plano si se guardó, de lo contrario vacía
-    confirmPassword: initialData?.password || '',
-    phonePrefix: initialData?.phonePrefix || '+593',
-    phoneNumber: initialData?.phoneNumber || '',
-    country: initialData?.country || 'Ecuador',
-    province: initialData?.province || '',
-    address: initialData?.address || '',
-    files: {} as Record<string, File | null>
-  });
-
-  // Si tenemos initialData, mostrar mensaje de bienvenida
-  const [showWelcomeBack, setShowWelcomeBack] = useState(!!initialData);
-
   if (showWelcomeBack && initialData) {
     return (
       <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-orange-500 selection:text-white relative overflow-y-auto">
         <DraftSavedScreen 
           ownerName={initialData.ownerName || 'Partner'} 
-          onContinue={() => setShowWelcomeBack(false)} 
+          onContinue={() => {
+            setShowWelcomeBack(false);
+            // Forzar el paso 1 si por alguna razón no está ahí, o el último paso guardado si tuviéramos esa info
+            setStep(1); 
+          }} 
         />
       </div>
     );
