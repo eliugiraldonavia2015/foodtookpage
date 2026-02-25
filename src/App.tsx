@@ -45,6 +45,11 @@ function App() {
 
   // Monitor auth state
   useEffect(() => {
+    // Si la ruta cambia, debemos limpiar el modo de autenticación especial para que la app funcione normal
+    if (location.pathname !== '/' && (authMode === 'restaurant-login' || authMode === 'restaurant-registration-resume')) {
+       // Opcional: Podríamos querer resetear authMode aquí, pero hay que tener cuidado.
+    }
+
     if (location.pathname === '/asdtyucvb') {
       setAuthMode('admin');
     } else if (location.pathname === '/staff') {
@@ -52,22 +57,22 @@ function App() {
     }
   }, [location.pathname]);
 
+  // Si cambia el authMode y no es login/registro de restaurante,
+  // y estamos logueados, necesitamos que se recargue el usuario real
   useEffect(() => {
-    // Si cambia el authMode y no es login/registro de restaurante,
-    // y estamos logueados, necesitamos que se recargue el usuario real
     if (user && authMode !== 'restaurant-login' && authMode !== 'restaurant-registration-resume' && user.joinedDate === '') {
        // Esto indica que tenemos el "Mock user" temporal, debemos recargar
+       // Pero NO lo hacemos si user es null (logout)
        setIsLoading(true);
-       // Forzar recarga (el onAuthStateChanged se disparará de nuevo al cambiar dependencias si fuera necesario, 
-       // pero aquí mejor recargamos manualmente o dejamos que el efecto de arriba lo haga si user cambia a null primero)
-       setUser(null); 
+       setUser(null); // Forzar recarga
     }
   }, [authMode]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      // SI ESTAMOS EN MODO LOGIN DE RESTAURANTE, NO HACEMOS NADA AQUÍ
+      // SI ESTAMOS EN MODO LOGIN DE RESTAURANTE O REANUDANDO REGISTRO, NO HACEMOS NADA AQUÍ
       // Dejamos que UserAuth maneje la redirección si hay borrador.
+      // IMPORTANTE: Bloquear tanto 'restaurant-login' como 'restaurant-registration-resume' para evitar redirecciones indeseadas.
       if (authMode === 'restaurant-login' || authMode === 'restaurant-registration-resume') {
           setIsLoading(false);
           // Solo si hay usuario (login exitoso), ponemos el mock. Si no, dejamos user en null.
