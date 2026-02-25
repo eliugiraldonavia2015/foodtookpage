@@ -38,27 +38,30 @@ export function Login({ onLogin, onBack, variant = 'admin' }: LoginProps) {
       // 1. Intentar iniciar sesión normalmente
       await signInWithEmailAndPassword(auth, email, password);
 
-      // 2. Verificación Estricta para Admins
+      // 2. Si es Admin, verificamos PERMISOS en 'mandar'
+      // Pero NO cerramos sesión inmediatamente si falla algo menor, dejamos que App.tsx decida,
+      // salvo que sea un error crítico de seguridad (cuenta desactivada o rol incorrecto).
       if (variant === 'admin') {
          const adminQuery = query(collection(dbAdmin, "mandar"), where("email", "==", email));
          const adminSnapshot = await getDocs(adminQuery);
 
          if (adminSnapshot.empty) {
-            await signOut(auth);
-            throw new Error("unauthorized-admin");
-         }
+            // Si no está en 'mandar', quizás deberíamos crearlo (Auto-Registro)
+            // Lanzamos error específico para que el catch lo capture y lo cree.
+            throw { code: 'auth/user-not-found-in-db' };
+         } else {
+             const adminData = adminSnapshot.docs[0].data();
+             
+             // Validación de estado de cuenta Admin
+             if (adminData.state !== 'active') {
+                await signOut(auth);
+                throw new Error("account-disabled");
+             }
 
-         const adminData = adminSnapshot.docs[0].data();
-         
-         // Validación de estado de cuenta Admin
-         if (adminData.state !== 'active') {
-            await signOut(auth);
-            throw new Error("account-disabled");
-         }
-
-         if (adminData.role !== 'admin') {
-            await signOut(auth);
-            throw new Error("unauthorized-admin-role");
+             if (adminData.role !== 'admin') {
+                await signOut(auth);
+                throw new Error("unauthorized-admin-role");
+             }
          }
       }
 
@@ -66,11 +69,11 @@ export function Login({ onLogin, onBack, variant = 'admin' }: LoginProps) {
     } catch (err: any) {
       console.error("Login error full object:", err);
       
-      // AUTO-REGISTRO: Si el usuario no existe en Auth pero SÍ en Firestore (mandar), lo creamos.
-      if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+      // AUTO-REGISTRO Y MANEJO DE ERRORES DE BASE DE DATOS
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found-in-db') {
         if (variant === 'admin') {
           try {
-            // Verificar si existe en 'mandar'
+            // Verificar si existe en 'mandar' para auto-crear o validar
             const adminQuery = query(collection(dbAdmin, "mandar"), where("email", "==", email));
             const adminSnapshot = await getDocs(adminQuery);
 
@@ -78,15 +81,29 @@ export function Login({ onLogin, onBack, variant = 'admin' }: LoginProps) {
               const adminData = adminSnapshot.docs[0].data();
               
               if (adminData.role === 'admin' && adminData.state === 'active') {
-                // El usuario es válido en Firestore, crearlo en Auth
-                await createUserWithEmailAndPassword(auth, email, password);
-                onLogin(email);
-                return; // Salir, éxito
+                // El usuario es válido en Firestore.
+                // Si el error fue que no existía en Auth, lo creamos.
+                if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+                    try {
+                        await createUserWithEmailAndPassword(auth, email, password);
+                        onLogin(email);
+                        return;
+                    } catch (createErr: any) {
+                        // Si falla porque "email-already-in-use", significa que la contraseña estaba mal en el login original
+                        if (createErr.code === 'auth/email-already-in-use') {
+                            setError('Contraseña incorrecta.');
+                            return;
+                        }
+                    }
+                } else {
+                    // Si el error fue 'user-not-found-in-db' pero AHORA sí lo encontramos (race condition?), permitimos acceso
+                    onLogin(email); 
+                    return;
+                }
               }
             }
           } catch (createErr) {
              console.error("Error en auto-registro:", createErr);
-             // Si falla la creación (ej: contraseña débil), seguimos mostrando el error original o uno nuevo
           }
         }
       }

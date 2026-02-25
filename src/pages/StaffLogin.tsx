@@ -33,30 +33,30 @@ export function StaffLogin({ onLogin, onBack }: StaffLoginProps) {
       const staffSnapshot = await getDocs(staffQuery);
 
       if (staffSnapshot.empty) {
-        await signOut(auth);
-        throw new Error("unauthorized-staff");
-      }
+        // Lanzamos error para que el catch intente auto-registro si es necesario
+        throw { code: 'auth/user-not-found-in-db' };
+      } else {
+          const staffData = staffSnapshot.docs[0].data();
 
-      const staffData = staffSnapshot.docs[0].data();
+          // Validación de estado de cuenta
+          if (staffData.state !== 'active') {
+            await signOut(auth);
+            throw new Error("account-disabled");
+          }
 
-      // Validación de estado de cuenta
-      if (staffData.state !== 'active') {
-        await signOut(auth);
-        throw new Error("account-disabled");
-      }
-
-      // Si es admin, rechazar acceso en este portal
-      if (staffData.role === 'admin') {
-        await signOut(auth);
-        throw new Error("admin-restricted");
+          // Si es admin, rechazar acceso en este portal
+          if (staffData.role === 'admin') {
+            await signOut(auth);
+            throw new Error("admin-restricted");
+          }
       }
 
       onLogin(email);
     } catch (err: any) {
       console.error("Login error:", err);
 
-      // AUTO-REGISTRO: Si el usuario no existe en Auth pero SÍ en Firestore (staff), lo creamos.
-      if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+      // AUTO-REGISTRO Y RECUPERACIÓN
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found-in-db') {
         try {
           // Verificar si existe en 'staff'
           const staffQuery = query(collection(dbAdmin, "staff"), where("email", "==", email));
@@ -66,10 +66,21 @@ export function StaffLogin({ onLogin, onBack }: StaffLoginProps) {
             const staffData = staffSnapshot.docs[0].data();
             
             if (staffData.role !== 'admin' && staffData.state === 'active') {
-              // El usuario es válido en Firestore, crearlo en Auth
-              await createUserWithEmailAndPassword(auth, email, password);
-              onLogin(email);
-              return; // Salir, éxito
+                if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+                    try {
+                        await createUserWithEmailAndPassword(auth, email, password);
+                        onLogin(email);
+                        return;
+                    } catch (createErr: any) {
+                        if (createErr.code === 'auth/email-already-in-use') {
+                            setError('Contraseña incorrecta.');
+                            return;
+                        }
+                    }
+                } else {
+                    onLogin(email);
+                    return;
+                }
             }
           }
         } catch (createErr) {

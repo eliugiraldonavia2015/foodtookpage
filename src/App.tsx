@@ -56,23 +56,33 @@ function App() {
       if (firebaseUser) {
         try {
           console.log("Usuario autenticado:", firebaseUser.email);
-          // Fetch user data from Firestore (Standard Users)
-          const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
           
-          if (userDoc.exists()) {
-            console.log("Datos de usuario encontrados en Firestore");
-            const userData = userDoc.data();
-            setUser({
-              id: firebaseUser.uid,
-              email: firebaseUser.email || '',
-              role: (userData.role as User['role']) || 'user',
-              name: userData.firstName ? `${userData.firstName} ${userData.lastName}` : (userData.name || 'Usuario'),
-              status: (userData.status as User['status']) || 'active',
-              joinedDate: userData.createdAt || new Date().toISOString()
-            } as User);
-          } else {
-             // Try to find in 'staff' collection (dbAdmin)
-             console.log("Buscando en colección Staff...");
+          // LÓGICA DE PRIORIDAD DE BÚSQUEDA
+          // 1. Si estamos en ruta de Admin (/asdtyucvb), buscar PRIMERO en 'mandar'
+          if (location.pathname === '/asdtyucvb') {
+             console.log("Ruta Admin detectada. Buscando en colección 'mandar'...");
+             const adminQuery = query(collection(dbAdmin, "mandar"), where("email", "==", firebaseUser.email));
+             const adminSnapshot = await getDocs(adminQuery);
+
+             if (!adminSnapshot.empty) {
+                const adminData = adminSnapshot.docs[0].data();
+                console.log("Usuario encontrado en Mandar (Admin):", adminData);
+                setUser({
+                   id: firebaseUser.uid,
+                   email: firebaseUser.email || '',
+                   role: 'admin',
+                   name: adminData.name || 'Admin',
+                   status: (adminData.state as User['status']) || 'active',
+                   joinedDate: new Date().toISOString()
+                } as User);
+                setIsLoading(false);
+                return; // Encontrado y configurado, salimos.
+             }
+          }
+
+          // 2. Si estamos en ruta de Staff (/staff), buscar PRIMERO en 'staff'
+          if (location.pathname === '/staff') {
+             console.log("Ruta Staff detectada. Buscando en colección 'staff'...");
              const staffQuery = query(collection(dbAdmin, "staff"), where("email", "==", firebaseUser.email));
              const staffSnapshot = await getDocs(staffQuery);
 
@@ -88,15 +98,52 @@ function App() {
                   status: (staffData.state as User['status']) || 'active',
                   joinedDate: new Date().toISOString()
                 } as User);
+                setIsLoading(false);
+                return; // Encontrado y configurado, salimos.
+             }
+          }
+
+          // 3. Búsqueda General (Fallback para otras rutas o si no se encontró arriba)
+          // Intentar 'users' (Usuarios normales/Restaurantes/Riders)
+          console.log("Búsqueda estándar en 'users'...");
+          const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
+          
+          if (userDoc.exists()) {
+            console.log("Datos de usuario encontrados en Firestore (users)");
+            const userData = userDoc.data();
+            setUser({
+              id: firebaseUser.uid,
+              email: firebaseUser.email || '',
+              role: (userData.role as User['role']) || 'user',
+              name: userData.firstName ? `${userData.firstName} ${userData.lastName}` : (userData.name || 'Usuario'),
+              status: (userData.status as User['status']) || 'active',
+              joinedDate: userData.createdAt || new Date().toISOString()
+            } as User);
+          } else {
+             // Si no está en 'users', hacemos un último intento en 'staff' y 'mandar' por si acaso entraron por ruta equivocada
+             // pero tienen credenciales válidas.
+             console.log("No encontrado en 'users'. Buscando en 'staff' como fallback...");
+             const staffQuery = query(collection(dbAdmin, "staff"), where("email", "==", firebaseUser.email));
+             const staffSnapshot = await getDocs(staffQuery);
+
+             if (!staffSnapshot.empty) {
+                const staffData = staffSnapshot.docs[0].data();
+                setUser({
+                  id: firebaseUser.uid,
+                  email: firebaseUser.email || '',
+                  role: staffData.role === 'admin' ? 'admin' : 'staff', 
+                  staffRole: staffData.role,
+                  name: staffData.name || 'Staff Member',
+                  status: (staffData.state as User['status']) || 'active',
+                  joinedDate: new Date().toISOString()
+                } as User);
              } else {
-                // Try to find in 'mandar' collection (Admin DB)
-                console.log("Buscando en colección Mandar (Admin)...");
+                console.log("No encontrado en 'staff'. Buscando en 'mandar' como fallback...");
                 const adminQuery = query(collection(dbAdmin, "mandar"), where("email", "==", firebaseUser.email));
                 const adminSnapshot = await getDocs(adminQuery);
 
                 if (!adminSnapshot.empty) {
                    const adminData = adminSnapshot.docs[0].data();
-                   console.log("Usuario encontrado en Mandar (Admin):", adminData);
                    setUser({
                       id: firebaseUser.uid,
                       email: firebaseUser.email || '',
@@ -107,11 +154,11 @@ function App() {
                    } as User);
                 } else {
                    console.warn("Usuario autenticado pero NO encontrado en ninguna colección");
-                   // Fallback if no firestore doc found anywhere
+                   // Usuario fantasma (Auth sí, DB no)
                    setUser({
                      id: firebaseUser.uid,
                      email: firebaseUser.email || '',
-                     role: 'user', // Default Role
+                     role: 'user',
                      name: firebaseUser.displayName || 'Usuario',
                      status: 'active',
                      joinedDate: new Date().toISOString()
@@ -121,12 +168,11 @@ function App() {
           }
         } catch (error) {
           console.error("Error fetching user profile from Firestore:", error);
-          // CRITICAL: Even if Firestore fails, we must set the user state so they are not stuck on login screen
           setUser({
             id: firebaseUser.uid,
             email: firebaseUser.email || '',
-            role: 'user', // Fallback role
-            name: firebaseUser.displayName || 'Usuario (Sin perfil)',
+            role: 'user',
+            name: firebaseUser.displayName || 'Usuario (Error)',
             status: 'active',
             joinedDate: new Date().toISOString()
           });
@@ -139,7 +185,7 @@ function App() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [location.pathname]); // Añadido location.pathname para re-ejecutar si cambia la ruta (importante para la lógica de prioridad)
 
   useEffect(() => {
     setSearchTerm('');
