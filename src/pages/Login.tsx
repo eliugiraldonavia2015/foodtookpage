@@ -2,7 +2,7 @@ import { useState, FormEvent, useEffect, ChangeEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Lock, ArrowRight, Loader2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { HonoraryMention } from '../components/HonoraryMention';
-import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, dbAdmin } from '../firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 
@@ -35,9 +35,10 @@ export function Login({ onLogin, onBack, variant = 'admin' }: LoginProps) {
     }
 
     try {
+      // 1. Intentar iniciar sesión normalmente
       await signInWithEmailAndPassword(auth, email, password);
 
-      // Verificación Estricta para Admins
+      // 2. Verificación Estricta para Admins
       if (variant === 'admin') {
          const adminQuery = query(collection(dbAdmin, "mandar"), where("email", "==", email));
          const adminSnapshot = await getDocs(adminQuery);
@@ -64,6 +65,32 @@ export function Login({ onLogin, onBack, variant = 'admin' }: LoginProps) {
       onLogin(email);
     } catch (err: any) {
       console.error("Login error full object:", err);
+      
+      // AUTO-REGISTRO: Si el usuario no existe en Auth pero SÍ en Firestore (mandar), lo creamos.
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+        if (variant === 'admin') {
+          try {
+            // Verificar si existe en 'mandar'
+            const adminQuery = query(collection(dbAdmin, "mandar"), where("email", "==", email));
+            const adminSnapshot = await getDocs(adminQuery);
+
+            if (!adminSnapshot.empty) {
+              const adminData = adminSnapshot.docs[0].data();
+              
+              if (adminData.role === 'admin' && adminData.state === 'active') {
+                // El usuario es válido en Firestore, crearlo en Auth
+                await createUserWithEmailAndPassword(auth, email, password);
+                onLogin(email);
+                return; // Salir, éxito
+              }
+            }
+          } catch (createErr) {
+             console.error("Error en auto-registro:", createErr);
+             // Si falla la creación (ej: contraseña débil), seguimos mostrando el error original o uno nuevo
+          }
+        }
+      }
+
       console.log("Error code:", err.code);
       console.log("Error message:", err.message);
 

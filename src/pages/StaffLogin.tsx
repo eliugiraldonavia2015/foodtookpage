@@ -1,7 +1,7 @@
 import { useState, FormEvent, useEffect, ChangeEvent } from 'react';
 import { motion } from 'motion/react';
 import { User, Lock, ArrowRight, Loader2, ArrowLeft } from 'lucide-react';
-import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, dbAdmin } from '../firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 
@@ -54,6 +54,29 @@ export function StaffLogin({ onLogin, onBack }: StaffLoginProps) {
       onLogin(email);
     } catch (err: any) {
       console.error("Login error:", err);
+
+      // AUTO-REGISTRO: Si el usuario no existe en Auth pero SÍ en Firestore (staff), lo creamos.
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+        try {
+          // Verificar si existe en 'staff'
+          const staffQuery = query(collection(dbAdmin, "staff"), where("email", "==", email));
+          const staffSnapshot = await getDocs(staffQuery);
+
+          if (!staffSnapshot.empty) {
+            const staffData = staffSnapshot.docs[0].data();
+            
+            if (staffData.role !== 'admin' && staffData.state === 'active') {
+              // El usuario es válido en Firestore, crearlo en Auth
+              await createUserWithEmailAndPassword(auth, email, password);
+              onLogin(email);
+              return; // Salir, éxito
+            }
+          }
+        } catch (createErr) {
+            console.error("Error en auto-registro:", createErr);
+        }
+      }
+
       if (err.message === 'unauthorized-staff' || err.message === 'admin-restricted') {
          setError('Cuenta no reconocida o no autorizada para este portal.');
       } else if (err.message === 'account-disabled') {
