@@ -56,6 +56,32 @@ export interface RestaurantRequest {
   documents?: string[]; // URLs to docs
 }
 
+export interface SupportTicket {
+  id: string;
+  type: 'client' | 'restaurant' | 'rider';
+  userId: string;
+  userName: string;
+  userEmail: string;
+  subject: string;
+  description: string;
+  status: 'open' | 'in_progress' | 'resolved' | 'closed';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  createdAt: string;
+  lastUpdate: string;
+  category: string;
+  assignedTo?: string; // Staff name or ID
+  messages?: TicketMessage[];
+}
+
+export interface TicketMessage {
+  id: string;
+  sender: 'user' | 'support' | 'system';
+  senderName: string;
+  content: string;
+  timestamp: string;
+  attachments?: string[];
+}
+
 export interface AuthState {
   isAuthenticated: boolean;
   user: User | null;

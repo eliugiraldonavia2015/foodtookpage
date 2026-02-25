@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { LogOut } from 'lucide-react';
 import { OnboardingDashboard } from './OnboardingDashboard';
+import { CustomerSupportDashboard } from './CustomerSupportDashboard';
 
 interface StaffDashboardProps {
   name: string;
@@ -17,6 +18,10 @@ export function StaffDashboard({ name, role, email, state, onLogout }: StaffDash
   
   if (normalizedRole === 'onboarding supervisor' || normalizedRole === 'onboarding_supervisor') {
     return <OnboardingDashboard name={name} email={email} onLogout={onLogout} role={role} state={state} />;
+  }
+
+  if (normalizedRole === 'customer support' || normalizedRole === 'servicio al cliente') {
+    return <CustomerSupportDashboard name={name} email={email} onLogout={onLogout} role={role} state={state} />;
   }
 
   return (

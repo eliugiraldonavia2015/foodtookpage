@@ -1,4 +1,4 @@
-import { User, Restaurant, Dish, RestaurantRequest } from './types';
+import { User, Restaurant, Dish, RestaurantRequest, SupportTicket } from './types';
 
 export const usersData: (User | Restaurant)[] = [
   { 
@@ -371,6 +371,108 @@ export const kpiData = {
   churn: '2.4%',
   nps: 72
 };
+
+export const supportTicketsData: SupportTicket[] = [
+  {
+    id: 'T-2023-001',
+    type: 'client',
+    userId: 'u101',
+    userName: 'Ana López',
+    userEmail: 'ana.lopez@example.com',
+    subject: 'Pedido incompleto',
+    description: 'Pedí 3 hamburguesas y solo llegaron 2. Solicito reembolso.',
+    status: 'open',
+    priority: 'high',
+    createdAt: '2023-10-25T14:30:00Z',
+    lastUpdate: '2023-10-25T14:30:00Z',
+    category: 'Pedido',
+    messages: [
+      {
+        id: 'm1',
+        sender: 'user',
+        senderName: 'Ana López',
+        content: 'Hola, mi pedido #12345 llegó incompleto. Falta una hamburguesa clásica.',
+        timestamp: '2023-10-25T14:30:00Z'
+      }
+    ]
+  },
+  {
+    id: 'T-2023-002',
+    type: 'restaurant',
+    userId: 'u2',
+    userName: 'Burger King Mock',
+    userEmail: 'manager@bkmock.com',
+    subject: 'Problemas con la app de recepción',
+    description: 'La app se cierra sola al intentar aceptar pedidos.',
+    status: 'in_progress',
+    priority: 'urgent',
+    createdAt: '2023-10-24T09:15:00Z',
+    lastUpdate: '2023-10-24T10:00:00Z',
+    category: 'Técnico',
+    assignedTo: 'Carlos Support',
+    messages: [
+      {
+        id: 'm1',
+        sender: 'user',
+        senderName: 'Burger King Manager',
+        content: 'La tablet se reinicia cuando entra un pedido grande.',
+        timestamp: '2023-10-24T09:15:00Z'
+      },
+      {
+        id: 'm2',
+        sender: 'support',
+        senderName: 'Carlos Support',
+        content: 'Hola, ¿podría indicarnos la versión de la app que están utilizando?',
+        timestamp: '2023-10-24T10:00:00Z'
+      }
+    ]
+  },
+  {
+    id: 'T-2023-003',
+    type: 'rider',
+    userId: 'r50',
+    userName: 'Pedro Rider',
+    userEmail: 'pedro@rider.com',
+    subject: 'Pago de la semana pasada incorrecto',
+    description: 'Me faltan 2 entregas en el reporte de pagos.',
+    status: 'open',
+    priority: 'medium',
+    createdAt: '2023-10-23T18:45:00Z',
+    lastUpdate: '2023-10-23T18:45:00Z',
+    category: 'Pagos'
+  },
+  {
+    id: 'T-2023-004',
+    type: 'client',
+    userId: 'u105',
+    userName: 'Jorge M.',
+    userEmail: 'jorge@mail.com',
+    subject: 'Comida fría',
+    description: 'El pedido tardó 2 horas y llegó frío.',
+    status: 'resolved',
+    priority: 'medium',
+    createdAt: '2023-10-20T20:00:00Z',
+    lastUpdate: '2023-10-21T10:00:00Z',
+    category: 'Calidad',
+    assignedTo: 'Maria Support',
+    messages: [
+      {
+        id: 'm1',
+        sender: 'user',
+        senderName: 'Jorge M.',
+        content: 'Muy mal servicio, todo frío.',
+        timestamp: '2023-10-20T20:00:00Z'
+      },
+      {
+        id: 'm2',
+        sender: 'support',
+        senderName: 'Maria Support',
+        content: 'Lamentamos lo sucedido, Jorge. Hemos abonado un crédito de $5 a tu cuenta.',
+        timestamp: '2023-10-21T10:00:00Z'
+      }
+    ]
+  }
+];
 
 export const northStarKpis = {
   gmv: '$3.8M',
