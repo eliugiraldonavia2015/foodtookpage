@@ -53,8 +53,32 @@ function App() {
   }, [location.pathname]);
 
   useEffect(() => {
+    // Si cambia el authMode y no es login/registro de restaurante,
+    // y estamos logueados, necesitamos que se recargue el usuario real
+    if (user && authMode !== 'restaurant-login' && authMode !== 'restaurant-registration-resume' && user.joinedDate === '') {
+       // Esto indica que tenemos el "Mock user" temporal, debemos recargar
+       setIsLoading(true);
+       // Forzar recarga (el onAuthStateChanged se disparará de nuevo al cambiar dependencias si fuera necesario, 
+       // pero aquí mejor recargamos manualmente o dejamos que el efecto de arriba lo haga si user cambia a null primero)
+       setUser(null); 
+    }
+  }, [authMode]);
+
+  useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      // SI ESTAMOS EN MODO LOGIN DE RESTAURANTE, NO HACEMOS NADA AQUÍ
+      // Dejamos que UserAuth maneje la redirección si hay borrador.
+      if (authMode === 'restaurant-login' || authMode === 'restaurant-registration-resume') {
+          setIsLoading(false);
+          // Solo si hay usuario (login exitoso), ponemos el mock. Si no, dejamos user en null.
+          if (firebaseUser) {
+             setUser({ id: firebaseUser.uid, name: firebaseUser.displayName || 'Partner', email: firebaseUser.email || '', role: 'restaurant', status: 'active', joinedDate: '' }); 
+          }
+          return;
+      }
+
       if (firebaseUser) {
+
         try {
           console.log("Usuario autenticado:", firebaseUser.email);
           
