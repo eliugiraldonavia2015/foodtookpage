@@ -381,6 +381,7 @@ export function RestaurantRegistration({ onBack, initialData }: RestaurantRegist
   const [errors, setErrors] = useState<Record<string, string>>({});
   
   const [isDraftSaved, setIsDraftSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   
   // Scroll to top when step changes or success screen is shown
   useEffect(() => {
@@ -509,8 +510,6 @@ export function RestaurantRegistration({ onBack, initialData }: RestaurantRegist
     setIsSuccess(true);
   };
 
-  const [isSaving, setIsSaving] = useState(false);
-
   // Cargar datos guardados si el usuario ya existe (lógica simplificada para demo)
   // En un caso real, deberíamos verificar si el usuario está logueado al montar
   
@@ -631,13 +630,69 @@ export function RestaurantRegistration({ onBack, initialData }: RestaurantRegist
     );
   }
 
-  // Renderizado principal robusto usando Switch
-  // Esto evita problemas de renderizado condicional anidado que causan pantallas negras
-  const renderStep = () => {
-    switch (step) {
-      case 0:
-        return (
-          <div className="grid md:grid-cols-2 gap-6 animate-fade-in">
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-orange-500 selection:text-white relative overflow-hidden flex flex-col">
+      
+      {/* Background Elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-10%] right-[-10%] w-[60vw] h-[60vw] bg-orange-500/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[50vw] h-[50vw] bg-yellow-500/5 rounded-full blur-3xl" />
+      </div>
+
+      {/* Navigation */}
+      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 max-w-7xl mx-auto w-full bg-white/80 backdrop-blur-md border-b border-slate-100/50 rounded-b-2xl md:rounded-none md:bg-transparent md:backdrop-blur-none md:border-none transition-all">
+        <div className="flex items-center gap-2">
+          <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/30">
+            <span className="text-white font-bold text-xl">FT</span>
+          </div>
+          <span className="font-bold text-xl tracking-tight text-slate-900">Registro Partner</span>
+        </div>
+        
+        <button 
+            onClick={handleSaveDraft}
+            className="flex items-center gap-2 px-4 py-2 rounded-full font-medium text-slate-600 hover:text-orange-500 hover:bg-orange-500/5 transition-all mr-2"
+            disabled={isSaving}
+          >
+            <Save size={18} />
+            <span className="hidden sm:inline">{isSaving ? 'Guardando...' : 'Guardar Progreso'}</span>
+          </button>
+          <button 
+            onClick={onBack}
+          className="flex items-center gap-2 px-4 py-2 rounded-full font-medium text-slate-600 hover:text-orange-500 hover:bg-orange-500/5 transition-all"
+        >
+          <ArrowLeft size={18} />
+          <span className="hidden sm:inline">Volver</span>
+        </button>
+      </nav>
+
+      {/* Main Content */}
+      <main className="flex-1 relative z-10 max-w-3xl mx-auto w-full px-6 pt-24 pb-20 flex flex-col justify-center">
+        
+        {/* Progress Bar - Only show if step > 0 */}
+        {step > 0 && (
+          <div className="mb-10">
+            <div className="flex justify-between text-sm font-medium text-slate-500 mb-3">
+              <span className={step >= 1 ? 'text-orange-500' : ''}>Información Básica</span>
+              <span className={step >= 2 ? 'text-orange-500' : ''}>Ubicación</span>
+              <span className={step >= 3 ? 'text-orange-500' : ''}>Documentación</span>
+            </div>
+            <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
+              <motion.div 
+                className="h-full bg-orange-500 rounded-full"
+                initial={{ width: '0%' }}
+                animate={{ width: `${step * 33.33}%` }}
+                transition={{ duration: 0.5, ease: "easeInOut" }}
+              />
+            </div>
+          </div>
+        )}
+
+        {step === 0 ? (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="grid md:grid-cols-2 gap-6"
+          >
             {/* App Option (Recommended) */}
             <div className="bg-gradient-to-br from-orange-500 to-red-600 rounded-[32px] p-8 text-white shadow-xl shadow-orange-500/20 relative overflow-hidden group hover:scale-[1.02] transition-transform duration-300">
               <div className="absolute top-0 right-0 bg-white text-orange-600 text-xs font-bold px-3 py-1 rounded-bl-xl shadow-sm z-10">
@@ -713,298 +768,230 @@ export function RestaurantRegistration({ onBack, initialData }: RestaurantRegist
                 </div>
               </div>
             </div>
-          </div>
-        );
-
-      case 1:
-        return (
+          </motion.div>
+        ) : (
           <div className="bg-white rounded-[32px] shadow-2xl shadow-slate-200/50 border border-slate-100 p-8 md:p-12 relative overflow-hidden">
-            <div className="space-y-6 animate-fade-in">
-              <div className="text-center mb-8">
-                <h2 className="text-3xl font-bold text-slate-900 mb-2">Comencemos</h2>
-                <p className="text-slate-500">Cuéntanos sobre tu negocio y quién lo administra.</p>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700 ml-1">Nombre del Restaurante</label>
-                  <div className="relative">
-                    <ChefHat className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                    <input 
-                      type="text" 
-                      value={formData.restaurantName}
-                      onChange={(e) => setFormData({...formData, restaurantName: e.target.value})}
-                      className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all font-medium"
-                      placeholder="Ej. Burger King"
-                    />
-                  </div>
+          
+          <AnimatePresence mode="wait">
+            {step === 1 && (
+              <motion.div
+                key="step1"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-6"
+              >
+                <div className="text-center mb-8">
+                  <h2 className="text-3xl font-bold text-slate-900 mb-2">Comencemos</h2>
+                  <p className="text-slate-500">Cuéntanos sobre tu negocio y quién lo administra.</p>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700 ml-1">RUC / ID Fiscal</label>
-                  <div className="relative">
-                    <CreditCard className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                    <input 
-                      type="text" 
-                      value={formData.ruc}
-                      onChange={(e) => setFormData({...formData, ruc: e.target.value})}
-                      className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all font-medium"
-                      placeholder="1790000000001"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700 ml-1">Nombre del Propietario</label>
-                  <div className="relative">
-                    <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                    <input 
-                      type="text" 
-                      value={formData.ownerName}
-                      onChange={(e) => setFormData({...formData, ownerName: e.target.value})}
-                      className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all font-medium"
-                      placeholder="Juan Pérez"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700 ml-1">Email Corporativo</label>
-                  <div className="relative">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                    <input 
-                      type="email" 
-                      value={formData.email}
-                      onChange={(e) => setFormData({...formData, email: e.target.value})}
-                      className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all font-medium"
-                      placeholder="admin@restaurante.com"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <PasswordInput
-                      label="Contraseña"
-                      value={formData.password}
-                      onChange={(val) => setFormData({...formData, password: val})}
-                      showStrengthMeter={true}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <PasswordInput
-                      label="Confirmar Contraseña"
-                      value={formData.confirmPassword}
-                      onChange={(val) => {
-                        setFormData({...formData, confirmPassword: val});
-                        if (errors.confirmPassword) setErrors(prev => ({...prev, confirmPassword: ''}));
-                      }}
-                      placeholder="••••••••"
-                      error={errors.confirmPassword}
-                      success={formData.password.length > 0 && formData.password === formData.confirmPassword}
-                      successMessage="Las contraseñas coinciden"
-                  />
-                </div>
-
-                <div className="space-y-2 md:col-span-2">
-                  <label className="text-sm font-bold text-slate-700 ml-1">Teléfono Móvil</label>
-                  <div className="flex gap-3">
-                    <div className="relative w-32 shrink-0">
-                      <select 
-                        value={formData.phonePrefix}
-                        onChange={(e) => setFormData({...formData, phonePrefix: e.target.value})}
-                        className="w-full pl-4 pr-8 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all font-medium appearance-none cursor-pointer"
-                      >
-                        {COUNTRY_PREFIXES.map(p => (
-                          <option key={p.code} value={p.code}>{p.flag} {p.code}</option>
-                        ))}
-                      </select>
-                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
-                    </div>
-                    <div className="relative flex-1">
-                      <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700 ml-1">Nombre del Restaurante</label>
+                    <div className="relative">
+                      <ChefHat className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                       <input 
-                        type="tel" 
-                        value={formData.phoneNumber}
-                        onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})}
+                        type="text" 
+                        value={formData.restaurantName}
+                        onChange={(e) => setFormData({...formData, restaurantName: e.target.value})}
                         className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all font-medium"
-                        placeholder="99 999 9999"
+                        placeholder="Ej. Burger King"
                       />
                     </div>
                   </div>
-                </div>
-              </div>
 
-              <div className="pt-6 flex justify-end">
-                <button 
-                  onClick={nextStep}
-                  className="px-8 py-4 bg-orange-500 text-white font-bold rounded-2xl shadow-xl shadow-orange-500/30 hover:bg-orange-600 hover:shadow-orange-500/40 transition-all active:scale-95 flex items-center gap-2"
-                >
-                  Continuar
-                  <ArrowLeft className="rotate-180" size={20} />
-                </button>
-              </div>
-            </div>
-          </div>
-        );
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700 ml-1">RUC / ID Fiscal</label>
+                    <div className="relative">
+                      <CreditCard className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                      <input 
+                        type="text" 
+                        value={formData.ruc}
+                        onChange={(e) => setFormData({...formData, ruc: e.target.value})}
+                        className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all font-medium"
+                        placeholder="1790000000001"
+                      />
+                    </div>
+                  </div>
 
-      case 2:
-        return (
-          <div className="bg-white rounded-[32px] shadow-2xl shadow-slate-200/50 border border-slate-100 p-8 md:p-12 relative overflow-hidden">
-            <div className="space-y-6 animate-fade-in">
-              <div className="text-center mb-8">
-                <h2 className="text-3xl font-bold text-slate-900 mb-2">Ubicación</h2>
-                <p className="text-slate-500">¿Dónde pueden encontrarte tus clientes?</p>
-              </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700 ml-1">Nombre del Propietario</label>
+                    <div className="relative">
+                      <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                      <input 
+                        type="text" 
+                        value={formData.ownerName}
+                        onChange={(e) => setFormData({...formData, ownerName: e.target.value})}
+                        className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all font-medium"
+                        placeholder="Juan Pérez"
+                      />
+                    </div>
+                  </div>
 
-              <div className="space-y-4">
-                 <div className="grid md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <label className="text-sm font-bold text-slate-700 ml-1">País</label>
-                      <div className="relative">
-                        <Building className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700 ml-1">Email Corporativo</label>
+                    <div className="relative">
+                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                      <input 
+                        type="email" 
+                        value={formData.email}
+                        onChange={(e) => setFormData({...formData, email: e.target.value})}
+                        className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all font-medium"
+                        placeholder="admin@restaurante.com"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <PasswordInput
+                        label="Contraseña"
+                        value={formData.password}
+                        onChange={(val) => setFormData({...formData, password: val})}
+                        showStrengthMeter={true}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <PasswordInput
+                        label="Confirmar Contraseña"
+                        value={formData.confirmPassword}
+                        onChange={(val) => {
+                          setFormData({...formData, confirmPassword: val});
+                          if (errors.confirmPassword) setErrors(prev => ({...prev, confirmPassword: ''}));
+                        }}
+                        placeholder="••••••••"
+                        error={errors.confirmPassword}
+                        success={formData.password.length > 0 && formData.password === formData.confirmPassword}
+                        successMessage="Las contraseñas coinciden"
+                    />
+                  </div>
+
+                  <div className="space-y-2 md:col-span-2">
+                    <label className="text-sm font-bold text-slate-700 ml-1">Teléfono Móvil</label>
+                    <div className="flex gap-3">
+                      <div className="relative w-32 shrink-0">
                         <select 
-                          value={formData.country}
-                          onChange={(e) => setFormData({...formData, country: e.target.value})}
-                          className="w-full pl-11 pr-10 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all font-medium appearance-none cursor-pointer"
+                          value={formData.phonePrefix}
+                          onChange={(e) => setFormData({...formData, phonePrefix: e.target.value})}
+                          className="w-full pl-4 pr-8 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all font-medium appearance-none cursor-pointer"
                         >
-                          <option value="Ecuador">Ecuador</option>
-                          <option value="Colombia">Colombia</option>
-                          <option value="Perú">Perú</option>
-                          <option value="México">México</option>
+                          {COUNTRY_PREFIXES.map(p => (
+                            <option key={p.code} value={p.code}>{p.flag} {p.code}</option>
+                          ))}
                         </select>
-                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
                       </div>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-bold text-slate-700 ml-1">Provincia / Estado</label>
-                      <div className="relative">
-                        <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                      <div className="relative flex-1">
+                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                         <input 
-                          type="text" 
-                          value={formData.province}
-                          onChange={(e) => setFormData({...formData, province: e.target.value})}
+                          type="tel" 
+                          value={formData.phoneNumber}
+                          onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})}
                           className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all font-medium"
-                          placeholder="Ej. Pichincha"
+                          placeholder="99 999 9999"
                         />
                       </div>
                     </div>
-                 </div>
-
-                 <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <label className="text-sm font-bold text-slate-700 ml-1">Dirección Completa</label>
-                      <div className="flex gap-2">
-                        <button 
-                          type="button"
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 text-orange-600 rounded-lg text-xs font-bold hover:bg-orange-100 transition-colors"
-                          onClick={() => setIsMapOpen(true)}
-                        >
-                          <Map size={14} />
-                          Usar Mapa
-                        </button>
-                        <button 
-                          type="button"
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-200 transition-colors disabled:opacity-50"
-                          onClick={handleCurrentLocation}
-                          disabled={isLocating}
-                        >
-                          {isLocating ? (
-                            <div className="w-3 h-3 border-2 border-slate-600 border-t-transparent rounded-full animate-spin"></div>
-                          ) : (
-                            <Locate size={14} />
-                          )}
-                          {isLocating ? 'Obteniendo...' : 'Ubicación Actual'}
-                        </button>
-                      </div>
-                    </div>
-                    <textarea 
-                      value={formData.address}
-                      onChange={(e) => setFormData({...formData, address: e.target.value})}
-                      className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all font-medium min-h-[120px] resize-none"
-                      placeholder="Calle Principal 123 y Secundaria, Edificio Torre A, Oficina 202"
-                    />
-                 </div>
-              </div>
-
-              <div className="pt-6 flex justify-between">
-                <button 
-                  onClick={prevStep}
-                  className="px-8 py-4 bg-slate-100 text-slate-600 font-bold rounded-2xl hover:bg-slate-200 transition-all active:scale-95"
-                >
-                  Atrás
-                </button>
-                <button 
-                  onClick={nextStep}
-                  className="px-8 py-4 bg-orange-500 text-white font-bold rounded-2xl shadow-xl shadow-orange-500/30 hover:bg-orange-600 hover:shadow-orange-500/40 transition-all active:scale-95 flex items-center gap-2"
-                >
-                  Continuar
-                  <ArrowLeft className="rotate-180" size={20} />
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-
-      case 3:
-        return (
-          <div className="bg-white rounded-[32px] shadow-2xl shadow-slate-200/50 border border-slate-100 p-8 md:p-12 relative overflow-hidden">
-            <div className="space-y-6 animate-fade-in">
-              <div className="text-center mb-8">
-                <h2 className="text-3xl font-bold text-slate-900 mb-2">Documentación</h2>
-                <p className="text-slate-500">Sube los archivos necesarios para verificar tu negocio.</p>
-              </div>
-
-              <div className="space-y-4">
-                {DOCUMENTS.map((doc) => (
-                  <div key={doc.id} className="p-4 border border-slate-200 rounded-2xl bg-slate-50 hover:bg-white hover:shadow-md transition-all group">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${formData.files[doc.id] ? 'bg-green-100 text-green-600' : 'bg-orange-100 text-orange-600'}`}>
-                          {formData.files[doc.id] ? <Check size={20} /> : <FileText size={20} />}
-                        </div>
-                        <div>
-                          <h4 className="font-bold text-slate-900 text-sm">{doc.label}</h4>
-                          <p className="text-xs text-slate-500">
-                            {formData.files[doc.id] ? formData.files[doc.id]?.name : (doc.required ? 'Requerido' : 'Opcional')}
-                          </p>
-                        </div>
-                      </div>
-                      <label className="cursor-pointer">
-                        <input 
-                          type="file" 
-                          className="hidden" 
-                          accept=".pdf,.jpg,.png,.jpeg"
-                          onChange={(e) => handleFileChange(doc.id, e.target.files?.[0] || null)}
-                        />
-                        <div className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:border-orange-500 hover:text-orange-500 transition-all flex items-center gap-2 shadow-sm">
-                          <Upload size={14} />
-                          <span>{formData.files[doc.id] ? 'Cambiar' : 'Subir'}</span>
-                        </div>
-                      </label>
-                    </div>
                   </div>
-                ))}
-              </div>
-
-              <div className="pt-6 flex flex-col gap-4">
-                <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                  <div className="relative flex items-center">
-                    <input 
-                      type="checkbox" 
-                      id="terms" 
-                      checked={termsAccepted}
-                      onChange={(e) => setTermsAccepted(e.target.checked)}
-                      className="peer h-6 w-6 cursor-pointer appearance-none rounded-lg border-2 border-slate-300 bg-white transition-all checked:border-orange-500 checked:bg-orange-500 hover:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500/20"
-                    />
-                    <Check size={16} className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white opacity-0 transition-opacity peer-checked:opacity-100" />
-                  </div>
-                  <label htmlFor="terms" className="cursor-pointer text-sm text-slate-600 select-none">
-                    Acepto los <a href="#" className="font-bold text-orange-600 hover:underline">términos y condiciones</a> y la política de privacidad.
-                  </label>
                 </div>
 
-                <div className="flex justify-between">
+                <div className="pt-6 flex justify-end">
+                  <button 
+                    onClick={nextStep}
+                    className="px-8 py-4 bg-orange-500 text-white font-bold rounded-2xl shadow-xl shadow-orange-500/30 hover:bg-orange-600 hover:shadow-orange-500/40 transition-all active:scale-95 flex items-center gap-2"
+                  >
+                    Continuar
+                    <ArrowLeft className="rotate-180" size={20} />
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            {step === 2 && (
+              <motion.div
+                key="step2"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-6"
+              >
+                <div className="text-center mb-8">
+                  <h2 className="text-3xl font-bold text-slate-900 mb-2">Ubicación</h2>
+                  <p className="text-slate-500">¿Dónde pueden encontrarte tus clientes?</p>
+                </div>
+
+                <div className="space-y-4">
+                   <div className="grid md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-sm font-bold text-slate-700 ml-1">País</label>
+                        <div className="relative">
+                          <Building className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                          <select 
+                            value={formData.country}
+                            onChange={(e) => setFormData({...formData, country: e.target.value})}
+                            className="w-full pl-11 pr-10 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all font-medium appearance-none cursor-pointer"
+                          >
+                            <option value="Ecuador">Ecuador</option>
+                            <option value="Colombia">Colombia</option>
+                            <option value="Perú">Perú</option>
+                            <option value="México">México</option>
+                          </select>
+                          <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-bold text-slate-700 ml-1">Provincia / Estado</label>
+                        <div className="relative">
+                          <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                          <input 
+                            type="text" 
+                            value={formData.province}
+                            onChange={(e) => setFormData({...formData, province: e.target.value})}
+                            className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all font-medium"
+                            placeholder="Ej. Pichincha"
+                          />
+                        </div>
+                      </div>
+                   </div>
+
+                   <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <label className="text-sm font-bold text-slate-700 ml-1">Dirección Completa</label>
+                        <div className="flex gap-2">
+                          <button 
+                            type="button"
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 text-orange-600 rounded-lg text-xs font-bold hover:bg-orange-100 transition-colors"
+                            onClick={() => setIsMapOpen(true)}
+                          >
+                            <Map size={14} />
+                            Usar Mapa
+                          </button>
+                          <button 
+                            type="button"
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-200 transition-colors disabled:opacity-50"
+                            onClick={handleCurrentLocation}
+                            disabled={isLocating}
+                          >
+                            {isLocating ? (
+                              <div className="w-3 h-3 border-2 border-slate-600 border-t-transparent rounded-full animate-spin"></div>
+                            ) : (
+                              <Locate size={14} />
+                            )}
+                            {isLocating ? 'Obteniendo...' : 'Ubicación Actual'}
+                          </button>
+                        </div>
+                      </div>
+                      <textarea 
+                        value={formData.address}
+                        onChange={(e) => setFormData({...formData, address: e.target.value})}
+                        className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all font-medium min-h-[120px] resize-none"
+                        placeholder="Calle Principal 123 y Secundaria, Edificio Torre A, Oficina 202"
+                      />
+                   </div>
+                </div>
+
+                <div className="pt-6 flex justify-between">
                   <button 
                     onClick={prevStep}
                     className="px-8 py-4 bg-slate-100 text-slate-600 font-bold rounded-2xl hover:bg-slate-200 transition-all active:scale-95"
@@ -1012,103 +999,117 @@ export function RestaurantRegistration({ onBack, initialData }: RestaurantRegist
                     Atrás
                   </button>
                   <button 
-                    onClick={handleSubmit}
-                    disabled={!termsAccepted || isSubmitting}
-                    className={`px-8 py-4 font-bold rounded-2xl shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2 ${termsAccepted && !isSubmitting ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white shadow-orange-500/30 hover:shadow-2xl hover:shadow-orange-500/40' : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'}`}
+                    onClick={nextStep}
+                    className="px-8 py-4 bg-orange-500 text-white font-bold rounded-2xl shadow-xl shadow-orange-500/30 hover:bg-orange-600 hover:shadow-orange-500/40 transition-all active:scale-95 flex items-center gap-2"
                   >
-                    {isSubmitting ? (
-                      <>
-                        <div className="w-5 h-5 border-2 border-white/50 border-t-white rounded-full animate-spin"></div>
-                        Enviando...
-                      </>
-                    ) : (
-                      <>
-                        <Check size={20} />
-                        Enviar Solicitud
-                      </>
-                    )}
+                    Continuar
+                    <ArrowLeft className="rotate-180" size={20} />
                   </button>
                 </div>
-                
-                <button 
-                  onClick={handleRequestHelp}
-                  className="w-full py-3 text-slate-400 hover:text-blue-500 font-medium text-sm transition-colors flex items-center justify-center gap-2 hover:bg-blue-50 rounded-xl"
-                >
-                  <HelpCircle size={16} />
-                  Solicito ayuda para este paso
-                </button>
-              </div>
-            </div>
-          </div>
-        );
+              </motion.div>
+            )}
 
-      default:
-        return (
-          <div className="flex items-center justify-center p-12 text-red-500">
-            Error: Paso desconocido ({step}). Por favor recarga la página.
-          </div>
-        );
-    }
-  };
+            {step === 3 && (
+              <motion.div
+                key="step3"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-6"
+              >
+                <div className="text-center mb-8">
+                  <h2 className="text-3xl font-bold text-slate-900 mb-2">Documentación</h2>
+                  <p className="text-slate-500">Sube los archivos necesarios para verificar tu negocio.</p>
+                </div>
 
-  return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-orange-500 selection:text-white relative overflow-hidden flex flex-col">
-      
-      {/* Background Elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] right-[-10%] w-[60vw] h-[60vw] bg-orange-500/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-[-10%] left-[-10%] w-[50vw] h-[50vw] bg-yellow-500/5 rounded-full blur-3xl" />
-      </div>
+                <div className="space-y-4">
+                  {DOCUMENTS.map((doc) => (
+                    <div key={doc.id} className="p-4 border border-slate-200 rounded-2xl bg-slate-50 hover:bg-white hover:shadow-md transition-all group">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${formData.files[doc.id] ? 'bg-green-100 text-green-600' : 'bg-orange-100 text-orange-600'}`}>
+                            {formData.files[doc.id] ? <Check size={20} /> : <FileText size={20} />}
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-slate-900 text-sm">{doc.label}</h4>
+                            <p className="text-xs text-slate-500">
+                              {formData.files[doc.id] ? formData.files[doc.id]?.name : (doc.required ? 'Requerido' : 'Opcional')}
+                            </p>
+                          </div>
+                        </div>
+                        <label className="cursor-pointer">
+                          <input 
+                            type="file" 
+                            className="hidden" 
+                            accept=".pdf,.jpg,.png,.jpeg"
+                            onChange={(e) => handleFileChange(doc.id, e.target.files?.[0] || null)}
+                          />
+                          <div className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:border-orange-500 hover:text-orange-500 transition-all flex items-center gap-2 shadow-sm">
+                            <Upload size={14} />
+                            <span>{formData.files[doc.id] ? 'Cambiar' : 'Subir'}</span>
+                          </div>
+                        </label>
+                      </div>
+                    </div>
+                  ))}
+                </div>
 
-      {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 max-w-7xl mx-auto w-full bg-white/80 backdrop-blur-md border-b border-slate-100/50 rounded-b-2xl md:rounded-none md:bg-transparent md:backdrop-blur-none md:border-none transition-all">
-        <div className="flex items-center gap-2">
-          <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/30">
-            <span className="text-white font-bold text-xl">FT</span>
-          </div>
-          <span className="font-bold text-xl tracking-tight text-slate-900">Registro Partner</span>
+                <div className="pt-6 flex flex-col gap-4">
+                  <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                    <div className="relative flex items-center">
+                      <input 
+                        type="checkbox" 
+                        id="terms" 
+                        checked={termsAccepted}
+                        onChange={(e) => setTermsAccepted(e.target.checked)}
+                        className="peer h-6 w-6 cursor-pointer appearance-none rounded-lg border-2 border-slate-300 bg-white transition-all checked:border-orange-500 checked:bg-orange-500 hover:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+                      />
+                      <Check size={16} className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white opacity-0 transition-opacity peer-checked:opacity-100" />
+                    </div>
+                    <label htmlFor="terms" className="cursor-pointer text-sm text-slate-600 select-none">
+                      Acepto los <a href="#" className="font-bold text-orange-600 hover:underline">términos y condiciones</a> y la política de privacidad.
+                    </label>
+                  </div>
+
+                  <div className="flex justify-between">
+                    <button 
+                      onClick={prevStep}
+                      className="px-8 py-4 bg-slate-100 text-slate-600 font-bold rounded-2xl hover:bg-slate-200 transition-all active:scale-95"
+                    >
+                      Atrás
+                    </button>
+                    <button 
+                      onClick={handleSubmit}
+                      disabled={!termsAccepted || isSubmitting}
+                      className={`px-8 py-4 font-bold rounded-2xl shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2 ${termsAccepted && !isSubmitting ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white shadow-orange-500/30 hover:shadow-2xl hover:shadow-orange-500/40' : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'}`}
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-white/50 border-t-white rounded-full animate-spin"></div>
+                          Enviando...
+                        </>
+                      ) : (
+                        <>
+                          <Check size={20} />
+                          Enviar Solicitud
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  
+                  <button 
+                    onClick={handleRequestHelp}
+                    className="w-full py-3 text-slate-400 hover:text-blue-500 font-medium text-sm transition-colors flex items-center justify-center gap-2 hover:bg-blue-50 rounded-xl"
+                  >
+                    <HelpCircle size={16} />
+                    Solicito ayuda para este paso
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
-        
-        <button 
-            onClick={handleSaveDraft}
-            className="flex items-center gap-2 px-4 py-2 rounded-full font-medium text-slate-600 hover:text-orange-500 hover:bg-orange-500/5 transition-all mr-2"
-            disabled={isSaving}
-          >
-            <Save size={18} />
-            <span className="hidden sm:inline">{isSaving ? 'Guardando...' : 'Guardar Progreso'}</span>
-          </button>
-          <button 
-            onClick={onBack}
-          className="flex items-center gap-2 px-4 py-2 rounded-full font-medium text-slate-600 hover:text-orange-500 hover:bg-orange-500/5 transition-all"
-        >
-          <ArrowLeft size={18} />
-          <span className="hidden sm:inline">Volver</span>
-        </button>
-      </nav>
-
-      {/* Main Content */}
-      <main className="flex-1 relative z-10 max-w-3xl mx-auto w-full px-6 pt-24 pb-20 flex flex-col justify-center">
-        
-        {/* Progress Bar - Only show if step > 0 */}
-        {step > 0 && (
-          <div className="mb-10">
-            <div className="flex justify-between text-sm font-medium text-slate-500 mb-3">
-              <span className={step >= 1 ? 'text-orange-500' : ''}>Información Básica</span>
-              <span className={step >= 2 ? 'text-orange-500' : ''}>Ubicación</span>
-              <span className={step >= 3 ? 'text-orange-500' : ''}>Documentación</span>
-            </div>
-            <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
-              <motion.div 
-                className="h-full bg-orange-500 rounded-full"
-                initial={{ width: '0%' }}
-                animate={{ width: `${step * 33.33}%` }}
-                transition={{ duration: 0.5, ease: "easeInOut" }}
-              />
-            </div>
-          </div>
         )}
-
-        {renderStep()}
       </main>
 
       <ScrollIndicator />
