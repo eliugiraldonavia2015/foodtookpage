@@ -33,7 +33,7 @@ function App() {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [authMode, setAuthMode] = useState<'none' | 'user' | 'admin' | 'staff' | 'rider' | 'restaurant' | 'rider-registration' | 'restaurant-registration' | 'rider-login' | 'restaurant-login' | 'restaurant-registration-resume'>('none');
+  const [authMode, setAuthMode] = useState<'none' | 'user' | 'admin' | 'staff' | 'rider' | 'restaurant' | 'rider-registration' | 'restaurant-registration' | 'rider-login' | 'restaurant-login' | 'restaurant-registration-resume' | 'rider-registration-resume'>('none');
   const [resumeData, setResumeData] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<Tab>('command-center');
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<string | null>(null);
@@ -63,6 +63,7 @@ function App() {
         // Verificar SIEMPRE primero si es un restaurante con registro pendiente (Borrador)
         // Esto tiene prioridad sobre cualquier otro rol
         try {
+          // Verificar PRIMERO si es un restaurante con registro pendiente (Borrador)
           const draftDoc = await getDoc(doc(db, "restaurant_requests", firebaseUser.uid));
           if (draftDoc.exists() && draftDoc.data().status === 'draft') {
             console.log("Detectado borrador de restaurante. Redirigiendo a registro...");
@@ -70,6 +71,16 @@ function App() {
             setAuthMode('restaurant-registration-resume');
             setIsLoading(false);
             return; // Detener flujo aquí, no cargar usuario normal
+          }
+
+          // Verificar SEGUNDO si es un rider con registro pendiente (Borrador)
+          const riderDraftDoc = await getDoc(doc(db, "rider_requests", firebaseUser.uid));
+          if (riderDraftDoc.exists() && riderDraftDoc.data().status === 'draft') {
+            console.log("Detectado borrador de rider. Redirigiendo a registro...");
+            setResumeData(riderDraftDoc.data());
+            setAuthMode('rider-registration-resume');
+            setIsLoading(false);
+            return; // Detener flujo aquí
           }
         } catch (error) {
           console.error("Error verificando borrador:", error);
@@ -320,8 +331,23 @@ function App() {
       return <RiderRegistration onBack={() => setAuthMode('rider')} />;
     }
     if (authMode === 'rider-login') {
-      return <UserAuth onLogin={() => {}} onBack={() => setAuthMode('rider')} variant="rider" />;
+      return <UserAuth 
+        onLogin={() => {
+          setAuthMode('rider');
+        }} 
+        onBack={() => setAuthMode('rider')} 
+        variant="rider" 
+        onResumeRegistration={(data) => {
+          setResumeData(data);
+          setAuthMode('rider-registration-resume');
+        }}
+      />;
     }
+    
+    if (authMode === 'rider-registration-resume') {
+        return <RiderRegistration onBack={() => setAuthMode('rider')} initialData={resumeData} />;
+    }
+
     if (authMode === 'restaurant') {
       return <RestaurantLandingPage onBack={() => setAuthMode('none')} onLoginClick={() => setAuthMode('restaurant-login')} />;
     }

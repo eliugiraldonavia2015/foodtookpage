@@ -3,12 +3,15 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, Upload, Check, ChevronDown, FileText, MapPin, User, Mail, Phone, Building, CreditCard, Bike, Smartphone, Download, CheckCircle, Store, ArrowRight, Map, Locate, Search, X, HelpCircle, Car } from 'lucide-react';
 import PasswordInput from '../components/PasswordInput';
 import { Footer } from '../components/Footer';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
-import { auth, db } from '../firebase';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { auth, db, storage } from '../firebase';
+import { Save } from 'lucide-react';
 
 interface RiderRegistrationProps {
   onBack: () => void;
+  initialData?: any;
 }
 
 const COUNTRY_PREFIXES = [
@@ -24,6 +27,111 @@ const DOCUMENTS = [
   { id: 'matricula', label: 'Matrícula del Vehículo', required: true },
   { id: 'antecedentes', label: 'Récord Policial', required: true },
 ];
+
+const ProgressSavedScreen = ({ name, onContinue, onLogout }: { name: string, onContinue: () => void, onLogout: () => void }) => {
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="flex flex-col items-center justify-center text-center p-8 max-w-2xl mx-auto min-h-screen"
+    >
+      <motion.div
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        transition={{ type: "spring", stiffness: 200, damping: 15 }}
+        className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mb-8 relative"
+      >
+        <Save size={48} className="text-green-600" />
+      </motion.div>
+
+      <h2 className="text-3xl font-bold text-slate-900 mb-4">
+        ¡Progreso Guardado, {name.split(' ')[0]}!
+      </h2>
+      
+      <p className="text-xl text-slate-600 mb-8 leading-relaxed">
+        Tus datos han sido almacenados correctamente. <br/>
+        Esperamos verte de nuevo pronto para completar tu registro.
+      </p>
+
+      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 mb-8 w-full text-left">
+        <h4 className="font-bold text-slate-900 mb-2 flex items-center gap-2">
+          <HelpCircle size={18} className="text-orange-500" />
+          ¿Necesitas ayuda?
+        </h4>
+        <p className="text-slate-600 text-sm mb-2">
+          Si tienes problemas para completar tu registro, contáctanos:
+        </p>
+        <ul className="text-sm text-slate-700 space-y-1 ml-6 list-disc">
+          <li>Soporte: <strong>soporte@foodtook.com</strong></li>
+          <li>WhatsApp: <strong>+593 99 999 9999</strong></li>
+        </ul>
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
+        <button 
+          onClick={onContinue}
+          className="px-8 py-4 bg-slate-100 text-slate-700 font-bold rounded-2xl hover:bg-slate-200 transition-all active:scale-95 flex items-center justify-center gap-2"
+        >
+          Seguir Editando
+        </button>
+        
+        <button 
+          onClick={onLogout}
+          className="px-8 py-4 bg-slate-900 text-white font-bold rounded-2xl shadow-xl shadow-slate-900/20 hover:bg-slate-800 transition-all active:scale-95 flex items-center justify-center gap-2"
+        >
+          Cerrar Sesión
+          <ArrowRight size={20} />
+        </button>
+      </div>
+    </motion.div>
+  );
+};
+
+const DraftSavedScreen = ({ name, onContinue }: { name: string, onContinue: () => void }) => {
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="flex flex-col items-center justify-center text-center p-8 max-w-2xl mx-auto min-h-screen"
+    >
+      <motion.div
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        transition={{ type: "spring", stiffness: 200, damping: 15 }}
+        className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mb-8 relative"
+      >
+        <Save size={48} className="text-green-600" />
+      </motion.div>
+
+      <h2 className="text-3xl font-bold text-slate-900 mb-4">
+        ¡Hola de nuevo, {name.split(' ')[0]}!
+      </h2>
+      
+      <p className="text-xl text-slate-600 mb-8 leading-relaxed">
+        Tu progreso está seguro con nosotros. <br/>
+        Hemos recuperado tu información para que continúes exactamente donde te quedaste.
+      </p>
+
+      <div className="bg-green-50 border border-green-100 rounded-2xl p-6 mb-8 w-full text-left">
+        <h4 className="font-bold text-green-900 mb-2 flex items-center gap-2">
+          <CheckCircle size={18} className="text-green-600" />
+          Estado del Registro
+        </h4>
+        <p className="text-green-700 text-sm">
+          Tus datos básicos y vehículo están guardados. Puedes revisarlos o continuar con la documentación.
+        </p>
+      </div>
+
+      <button 
+        onClick={onContinue}
+        className="px-8 py-4 bg-green-600 text-white font-bold rounded-2xl shadow-xl shadow-green-500/30 hover:bg-green-700 hover:shadow-green-500/40 transition-all active:scale-95 flex items-center gap-2"
+      >
+        Continuar Registro
+        <ArrowRight size={20} />
+      </button>
+    </motion.div>
+  );
+};
 
 const SuccessScreen = ({ onFinish, email, title, message }: { onFinish: () => void, email: string, title?: React.ReactNode, message?: React.ReactNode }) => {
   return (
@@ -247,11 +355,34 @@ const ScrollIndicator = () => {
   );
 };
 
-export function RiderRegistration({ onBack }: RiderRegistrationProps) {
+export function RiderRegistration({ onBack, initialData }: RiderRegistrationProps) {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
-  const [step, setStep] = useState(0); // 0 = Choice, 1 = Personal, 2 = Vehicle, 3 = Docs
+  
+  // Sanear datos iniciales de forma robusta
+  const safeInitialData = initialData || {};
+
+  const [formData, setFormData] = useState({
+    firstName: safeInitialData.firstName || '',
+    lastName: safeInitialData.lastName || '',
+    idNumber: safeInitialData.idNumber || '', // Cedula
+    email: safeInitialData.email || '',
+    password: safeInitialData.password || '',
+    confirmPassword: safeInitialData.password || '',
+    phonePrefix: safeInitialData.phonePrefix || '+593',
+    phoneNumber: safeInitialData.phoneNumber || '',
+    city: safeInitialData.city || '',
+    address: safeInitialData.address || '',
+    addressOwner: safeInitialData.addressOwner || 'self',
+    vehicleType: safeInitialData.vehicle?.type || 'motorcycle',
+    plate: safeInitialData.vehicle?.plate || '',
+    files: {} as Record<string, File | null>
+  });
+
+  const [step, setStep] = useState(() => initialData ? 1 : 0); // 0 = Choice, 1 = Personal, 2 = Vehicle, 3 = Docs
+  const [showWelcomeBack, setShowWelcomeBack] = useState(!!initialData);
+
   const [isSuccess, setIsSuccess] = useState(false);
   const [isHelpRequested, setIsHelpRequested] = useState(false);
   const [isMapOpen, setIsMapOpen] = useState(false);
@@ -259,32 +390,105 @@ export function RiderRegistration({ onBack }: RiderRegistrationProps) {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   
+  const [isDraftSaved, setIsDraftSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, [step, isSuccess]);
+  }, [step, isSuccess, isDraftSaved]);
 
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    idNumber: '', // Cedula
-    email: '',
-    password: '',
-    confirmPassword: '',
-    phonePrefix: '+593',
-    phoneNumber: '',
-    city: '',
-    address: '',
-    addressOwner: 'self' as 'self' | 'other',
-    vehicleType: 'motorcycle' as 'motorcycle' | 'bicycle' | 'car',
-    plate: '',
-    files: {} as Record<string, File | null>
-  });
+  if (showWelcomeBack && initialData) {
+    return (
+      <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-green-500 selection:text-white relative overflow-y-auto">
+        <DraftSavedScreen 
+          name={initialData.firstName || 'Rider'} 
+          onContinue={() => {
+            setShowWelcomeBack(false);
+            setStep(1); 
+          }} 
+        />
+      </div>
+    );
+  }
 
   const handleFileChange = (docId: string, file: File | null) => {
     setFormData(prev => ({
       ...prev,
       files: { ...prev.files, [docId]: file }
     }));
+  };
+
+  const handleSaveDraft = async () => {
+    if (!formData.email || !formData.password) {
+      alert("Necesitas ingresar un email y contraseña para guardar tu progreso.");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      // 1. Crear usuario en Auth (o loguear si ya existe)
+      let user;
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+        user = userCredential.user;
+      } catch (authError: any) {
+        if (authError.code === 'auth/email-already-in-use') {
+           // Intentar login silencioso o pedir login
+           const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
+           user = userCredential.user;
+        } else {
+           throw authError;
+        }
+      }
+
+      if (!user) throw new Error("No se pudo autenticar al usuario");
+
+      // 2. Guardar borrador en Firestore usando el UID del usuario
+      const draftRef = doc(db, "rider_requests", user.uid);
+      
+      // Subir archivos si hay nuevos
+      const fileUrls: Record<string, string> = {};
+      for (const [key, file] of Object.entries(formData.files)) {
+        if (file) {
+          const fileRef = ref(storage, `rider-documents/${user.uid}/${key}_${file.name}`);
+          await uploadBytes(fileRef, file);
+          const downloadURL = await getDownloadURL(fileRef);
+          fileUrls[`${key}Url`] = downloadURL;
+        }
+      }
+
+      // Preparar datos para guardar
+      const dataToSave = {
+        id: user.uid,
+        status: 'draft',
+        lastUpdated: serverTimestamp(),
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        idNumber: formData.idNumber,
+        email: formData.email,
+        password: formData.password,
+        phonePrefix: formData.phonePrefix,
+        phoneNumber: formData.phoneNumber,
+        city: formData.city,
+        address: formData.address,
+        addressOwner: formData.addressOwner,
+        vehicle: {
+          type: formData.vehicleType,
+          plate: formData.plate,
+        },
+        savedDocuments: fileUrls
+      };
+
+      await setDoc(draftRef, dataToSave, { merge: true });
+
+      // No cerramos sesión aquí automáticamente
+      setIsDraftSaved(true);
+    } catch (error: any) {
+      console.error("Error guardando borrador:", error);
+      alert("Error al guardar: " + error.message);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleCurrentLocation = () => {
@@ -322,38 +526,57 @@ export function RiderRegistration({ onBack }: RiderRegistrationProps) {
   const handleSubmit = async () => {
     try {
       setIsSuccess(false); // Reset success state
-      // 1. Create user in Firebase Auth
-      const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
-      const user = userCredential.user;
+      
+      // 1. Create reference for ID
+      const newRiderRef = doc(collection(db, "rider_requests"));
+      const requestId = newRiderRef.id;
 
-      // 2. Prepare user data for Firestore
-      const riderData = {
-        uid: user.uid,
+      // 2. Upload files to Storage
+      const fileUrls: Record<string, string> = {};
+      
+      for (const [key, file] of Object.entries(formData.files)) {
+        if (file) {
+          const fileRef = ref(storage, `rider-documents/${requestId}/${key}_${file.name}`);
+          await uploadBytes(fileRef, file);
+          const downloadURL = await getDownloadURL(fileRef);
+          fileUrls[`${key}Url`] = downloadURL;
+        }
+      }
+
+      // 3. Save to Firestore "rider_requests" collection
+      await setDoc(newRiderRef, {
+        id: requestId,
+        status: 'pending',
+        submittedAt: serverTimestamp(),
+        
+        // Datos Personales
         firstName: formData.firstName,
         lastName: formData.lastName,
+        idNumber: formData.idNumber,
+        
+        // Contacto
         email: formData.email,
-        phone: `${formData.phonePrefix}${formData.phoneNumber}`,
-        role: 'rider',
-        status: 'pending_approval', // Wait for admin approval
+        phone: `${formData.phonePrefix} ${formData.phoneNumber}`,
+        
+        // Ubicación
+        city: formData.city,
         address: formData.address,
         addressOwner: formData.addressOwner,
+        
+        // Vehículo
         vehicle: {
           type: formData.vehicleType,
           plate: formData.plate,
         },
-        // In a real app, you would upload files to Storage and save URLs here.
-        // For now, we just note that files were provided.
-        documentsProvided: Object.keys(formData.files).filter(k => formData.files[k] !== null),
-        createdAt: new Date().toISOString(),
-        idNumber: formData.idNumber,
-        city: formData.city
-      };
-
-      // 3. Save to Firestore "users" collection (same as iOS)
-      await setDoc(doc(db, "users", user.uid), riderData);
-
-      // 4. Create username mapping (optional, if your iOS app uses it)
-      // await setDoc(doc(db, "usernames", formData.email), { uid: user.uid });
+        
+        // Archivos
+        documents: fileUrls,
+        
+        // Metadatos adicionales
+        role: 'rider',
+        platform: 'web',
+        appVersion: '1.0.0'
+      });
 
       setIsSuccess(true);
     } catch (error: any) {
@@ -364,7 +587,7 @@ export function RiderRegistration({ onBack }: RiderRegistrationProps) {
       } else if (error.code === 'auth/weak-password') {
         errorMsg = "La contraseña es muy débil.";
       }
-      alert(errorMsg); // Simple alert for now
+      alert(errorMsg); 
     }
   };
 
@@ -384,6 +607,28 @@ export function RiderRegistration({ onBack }: RiderRegistrationProps) {
     setStep(s => Math.min(s + 1, 3));
   };
   const prevStep = () => setStep(s => Math.max(s - 1, 1));
+
+  if (isDraftSaved) {
+    return (
+      <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-green-500 selection:text-white relative overflow-y-auto">
+         <ProgressSavedScreen 
+           name={formData.firstName} 
+           onContinue={() => {
+             setIsDraftSaved(false);
+             setStep(step); // Mantiene el paso actual
+           }} 
+           onLogout={async () => {
+              try {
+                await signOut(auth);
+                window.location.reload(); // Recargar para asegurar que el estado se limpie completamente y vuelva al inicio
+              } catch (error) {
+                console.error("Error signing out", error);
+              }
+           }}
+         />
+      </div>
+    );
+  }
 
   if (isSuccess) {
     return (
@@ -433,6 +678,17 @@ export function RiderRegistration({ onBack }: RiderRegistrationProps) {
           <span className="hidden sm:inline">Volver</span>
         </button>
       </nav>
+
+      <div className="fixed top-4 right-4 z-[60] flex gap-2">
+         <button 
+            onClick={handleSaveDraft}
+            className="flex items-center gap-2 px-4 py-2 rounded-full font-medium bg-white/90 backdrop-blur text-slate-600 hover:text-green-500 hover:bg-white shadow-lg border border-slate-100 transition-all"
+            disabled={isSaving}
+          >
+            <Save size={18} />
+            <span className="hidden sm:inline">{isSaving ? 'Guardando...' : 'Guardar Progreso'}</span>
+          </button>
+      </div>
 
       {/* Main Content */}
       <main className="flex-1 relative z-10 max-w-3xl mx-auto w-full px-6 pt-24 pb-20 flex flex-col justify-center">
