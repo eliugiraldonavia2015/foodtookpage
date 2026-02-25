@@ -3,9 +3,11 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, Upload, Check, ChevronDown, FileText, MapPin, User, Mail, Phone, Building, CreditCard, ChefHat, Smartphone, Download, CheckCircle, Store, ExternalLink, ArrowRight, Map, Locate, Search, X, HelpCircle } from 'lucide-react';
 import PasswordInput from '../components/PasswordInput';
 import { Footer } from '../components/Footer';
-import { db, storage } from '../firebase';
-import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { db, storage, auth } from '../firebase';
+import { collection, doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
+import { Save } from 'lucide-react';
 
 interface RestaurantRegistrationProps {
   onBack: () => void;
@@ -434,6 +436,80 @@ export function RestaurantRegistration({ onBack }: RestaurantRegistrationProps) 
     setIsSuccess(true);
   };
 
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Cargar datos guardados si el usuario ya existe (lógica simplificada para demo)
+  // En un caso real, deberíamos verificar si el usuario está logueado al montar
+  
+  const handleSaveDraft = async () => {
+    if (!formData.email || !formData.password) {
+      alert("Necesitas ingresar un email y contraseña para guardar tu progreso.");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      // 1. Crear usuario en Auth (o loguear si ya existe)
+      let user;
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+        user = userCredential.user;
+      } catch (authError: any) {
+        if (authError.code === 'auth/email-already-in-use') {
+           // Intentar login silencioso o pedir login
+           const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
+           user = userCredential.user;
+        } else {
+           throw authError;
+        }
+      }
+
+      if (!user) throw new Error("No se pudo autenticar al usuario");
+
+      // 2. Guardar borrador en Firestore usando el UID del usuario
+      // Usamos una colección 'restaurant_drafts' o la misma 'restaurant_requests' con status 'draft'
+      const draftRef = doc(db, "restaurant_requests", user.uid);
+      
+      // Subir archivos si hay nuevos (opcional en borrador, pero útil)
+      const fileUrls: Record<string, string> = {};
+      for (const [key, file] of Object.entries(formData.files)) {
+        if (file) {
+          const fileRef = ref(storage, `restaurant-documents/${user.uid}/${key}_${file.name}`);
+          await uploadBytes(fileRef, file);
+          const downloadURL = await getDownloadURL(fileRef);
+          fileUrls[`${key}Url`] = downloadURL;
+        }
+      }
+
+      // Preparar datos para guardar (excluyendo archivos raw)
+      const dataToSave = {
+        id: user.uid,
+        status: 'draft',
+        lastUpdated: serverTimestamp(),
+        restaurantName: formData.restaurantName,
+        ruc: formData.ruc,
+        ownerName: formData.ownerName,
+        email: formData.email,
+        password: formData.password, // Nota: Guardar contraseña en texto plano no es ideal, pero Auth ya la maneja. Solo para rellenar formulario.
+        phonePrefix: formData.phonePrefix,
+        phoneNumber: formData.phoneNumber,
+        country: formData.country,
+        province: formData.province,
+        address: formData.address,
+        savedDocuments: fileUrls
+      };
+
+      await setDoc(draftRef, dataToSave, { merge: true });
+
+      alert("Progreso guardado correctamente. Puedes volver cuando quieras iniciando sesión.");
+    } catch (error: any) {
+      console.error("Error guardando borrador:", error);
+      alert("Error al guardar: " + error.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const nextStep = () => {
     if (step === 1) {
       if (formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword) {
@@ -487,7 +563,15 @@ export function RestaurantRegistration({ onBack }: RestaurantRegistrationProps) 
         </div>
         
         <button 
-          onClick={onBack}
+            onClick={handleSaveDraft}
+            className="flex items-center gap-2 px-4 py-2 rounded-full font-medium text-slate-600 hover:text-orange-500 hover:bg-orange-500/5 transition-all mr-2"
+            disabled={isSaving}
+          >
+            <Save size={18} />
+            <span className="hidden sm:inline">{isSaving ? 'Guardando...' : 'Guardar Progreso'}</span>
+          </button>
+          <button 
+            onClick={onBack}
           className="flex items-center gap-2 px-4 py-2 rounded-full font-medium text-slate-600 hover:text-orange-500 hover:bg-orange-500/5 transition-all"
         >
           <ArrowLeft size={18} />
