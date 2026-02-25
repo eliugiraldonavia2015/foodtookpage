@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { LogOut } from 'lucide-react';
+import { OnboardingDashboard } from './OnboardingDashboard';
 
 interface StaffDashboardProps {
   name: string;
@@ -11,6 +12,10 @@ interface StaffDashboardProps {
 }
 
 export function StaffDashboard({ name, role, email, state, onLogout }: StaffDashboardProps) {
+  if (role === 'Onboarding Supervisor') {
+    return <OnboardingDashboard name={name} email={email} onLogout={onLogout} role={role} state={state} />;
+  }
+
   return (
     <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center">
       <motion.div 

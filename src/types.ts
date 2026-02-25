@@ -4,7 +4,7 @@ export interface User {
   email: string;
   status: 'active' | 'inactive' | 'banned' | 'pending_approval';
   role: 'admin' | 'restaurant' | 'staff' | 'rider' | 'user';
-  staffRole?: 'Secretario' | 'Ventas' | 'Servicio al cliente' | 'Legal' | 'Financiero' | 'Inversor';
+  staffRole?: 'Secretario' | 'Ventas' | 'Servicio al cliente' | 'Legal' | 'Financiero' | 'Inversor' | 'Onboarding Supervisor';
   joinedDate: string;
   phone?: string;
   address?: string;
