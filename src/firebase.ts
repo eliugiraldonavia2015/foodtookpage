@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore, initializeFirestore } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: "AIzaSyBnd_pJdUzd_AsRNsEKL4gjEQ0MbT5pR4g",
@@ -25,5 +26,8 @@ export const db = initializeFirestore(app, {}, "logincloud");
 
 // Conexión a la base de datos 'ghkm' para Admins y Staff
 export const dbAdmin = initializeFirestore(app, {}, "ghkm");
+
+// Inicializar Storage
+export const storage = getStorage(app);
 
 export default app;

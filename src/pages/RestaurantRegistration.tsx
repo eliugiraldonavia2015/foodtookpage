@@ -3,6 +3,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, Upload, Check, ChevronDown, FileText, MapPin, User, Mail, Phone, Building, CreditCard, ChefHat, Smartphone, Download, CheckCircle, Store, ExternalLink, ArrowRight, Map, Locate, Search, X, HelpCircle } from 'lucide-react';
 import PasswordInput from '../components/PasswordInput';
 import { Footer } from '../components/Footer';
+import { db, storage } from '../firebase';
+import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 interface RestaurantRegistrationProps {
   onBack: () => void;
@@ -296,6 +299,7 @@ export function RestaurantRegistration({ onBack }: RestaurantRegistrationProps) 
     window.scrollTo(0, 0);
   }, []);
   const [step, setStep] = useState(0); // 0 = Choice Screen, 1-3 = Registration Steps
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isHelpRequested, setIsHelpRequested] = useState(false);
   const [isMapOpen, setIsMapOpen] = useState(false);
@@ -362,8 +366,67 @@ export function RestaurantRegistration({ onBack }: RestaurantRegistrationProps) 
     );
   };
 
-  const handleSubmit = () => {
-    setIsSuccess(true);
+  const handleSubmit = async () => {
+    // Validate required documents
+    const missingDocs = DOCUMENTS.filter(doc => doc.required && !formData.files[doc.id]);
+    if (missingDocs.length > 0) {
+      alert(`Faltan documentos requeridos: ${missingDocs.map(d => d.label).join(', ')}`);
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // 1. Crear referencia al documento para obtener ID
+      const newRestaurantRef = doc(collection(db, "restaurant_requests"));
+      const requestId = newRestaurantRef.id;
+
+      // 2. Subir archivos a Storage
+      const fileUrls: Record<string, string> = {};
+      
+      for (const [key, file] of Object.entries(formData.files)) {
+        if (file) {
+          const fileRef = ref(storage, `restaurant-documents/${requestId}/${key}_${file.name}`);
+          await uploadBytes(fileRef, file);
+          const downloadURL = await getDownloadURL(fileRef);
+          fileUrls[`${key}Url`] = downloadURL;
+        }
+      }
+
+      // 3. Guardar datos en Firestore
+      await setDoc(newRestaurantRef, {
+        id: requestId,
+        status: 'pending',
+        submittedAt: serverTimestamp(),
+        
+        // Datos del Negocio
+        restaurantName: formData.restaurantName,
+        ruc: formData.ruc,
+        ownerName: formData.ownerName,
+        
+        // Contacto
+        email: formData.email,
+        phone: `${formData.phonePrefix} ${formData.phoneNumber}`,
+        
+        // Ubicación
+        country: formData.country,
+        province: formData.province,
+        address: formData.address,
+        
+        // Archivos
+        documents: fileUrls,
+        
+        // Metadatos adicionales
+        platform: 'web',
+        appVersion: '1.0.0'
+      });
+
+      setIsSuccess(true);
+    } catch (error) {
+      console.error("Error al enviar solicitud:", error);
+      alert("Hubo un error al enviar tu solicitud. Por favor intenta nuevamente.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleRequestHelp = () => {
@@ -847,11 +910,20 @@ export function RestaurantRegistration({ onBack }: RestaurantRegistrationProps) 
                     </button>
                     <button 
                       onClick={handleSubmit}
-                      disabled={!termsAccepted}
-                      className={`px-8 py-4 font-bold rounded-2xl shadow-xl transition-all active:scale-95 flex items-center gap-2 ${termsAccepted ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white shadow-orange-500/30 hover:shadow-2xl hover:shadow-orange-500/40' : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'}`}
+                      disabled={!termsAccepted || isSubmitting}
+                      className={`px-8 py-4 font-bold rounded-2xl shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2 ${termsAccepted && !isSubmitting ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white shadow-orange-500/30 hover:shadow-2xl hover:shadow-orange-500/40' : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'}`}
                     >
-                      <Check size={20} />
-                      Enviar Solicitud
+                      {isSubmitting ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-white/50 border-t-white rounded-full animate-spin"></div>
+                          Enviando...
+                        </>
+                      ) : (
+                        <>
+                          <Check size={20} />
+                          Enviar Solicitud
+                        </>
+                      )}
                     </button>
                   </div>
                   
