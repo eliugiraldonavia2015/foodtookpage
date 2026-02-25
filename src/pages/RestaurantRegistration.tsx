@@ -521,18 +521,22 @@ export function RestaurantRegistration({ onBack, initialData }: RestaurantRegist
 
     setIsSaving(true);
     try {
-      // 1. Crear usuario en Auth (o loguear si ya existe)
-      let user;
-      try {
-        const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
-        user = userCredential.user;
-      } catch (authError: any) {
-        if (authError.code === 'auth/email-already-in-use') {
-           // Intentar login silencioso o pedir login
-           const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
-           user = userCredential.user;
-        } else {
-           throw authError;
+      // 1. Obtener usuario (usar actual si coincide, o autenticar)
+      let user = auth.currentUser;
+      const isCurrentUser = user && user.email === formData.email;
+
+      if (!isCurrentUser) {
+        try {
+          const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+          user = userCredential.user;
+        } catch (authError: any) {
+          if (authError.code === 'auth/email-already-in-use') {
+             // Intentar login silencioso o pedir login
+             const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
+             user = userCredential.user;
+          } else {
+             throw authError;
+          }
         }
       }
 
