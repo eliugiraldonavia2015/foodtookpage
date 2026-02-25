@@ -63,19 +63,26 @@ export function Login({ onLogin, onBack, variant = 'admin' }: LoginProps) {
 
       onLogin(email);
     } catch (err: any) {
-      console.error("Login error:", err);
+      console.error("Login error full object:", err);
+      console.log("Error code:", err.code);
+      console.log("Error message:", err.message);
+
       if (err.message === 'unauthorized-admin' || err.message === 'unauthorized-admin-role') {
          setError('Cuenta no autorizada para administración.');
       } else if (err.message === 'account-disabled') {
          setError('Esta cuenta ha sido deshabilitada. Contacte al administrador.');
-      } else if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
-        setError('Usuario o contraseña incorrectos.');
+      } else if (err.code === 'auth/user-not-found') {
+        setError('El usuario no existe en Firebase Authentication. Por favor regístralo primero o verifica el correo.');
+      } else if (err.code === 'auth/wrong-password') {
+        setError('Contraseña incorrecta.');
+      } else if (err.code === 'auth/invalid-credential') {
+        setError('Credenciales inválidas (Usuario o contraseña).');
       } else if (err.code === 'auth/invalid-email') {
         setError('El formato del correo electrónico es inválido.');
       } else if (err.code === 'auth/too-many-requests') {
         setError('Demasiados intentos fallidos. Intenta más tarde.');
       } else {
-        setError('Ocurrió un error al iniciar sesión. Intenta nuevamente.');
+        setError(`Error: ${err.message || 'Ocurrió un error al iniciar sesión'}`);
       }
     } finally {
       setIsLoading(false);
