@@ -45,11 +45,8 @@ function App() {
 
   // Monitor auth state
   useEffect(() => {
-    // Si la ruta cambia, debemos limpiar el modo de autenticación especial para que la app funcione normal
-    if (location.pathname !== '/' && (authMode === 'restaurant-login' || authMode === 'restaurant-registration-resume')) {
-       // Opcional: Podríamos querer resetear authMode aquí, pero hay que tener cuidado.
-    }
-
+    // Si la ruta cambia, podemos resetear authMode si es necesario, 
+    // pero la lógica centralizada ya se encarga de la mayoría de casos.
     if (location.pathname === '/asdtyucvb') {
       setAuthMode('admin');
     } else if (location.pathname === '/staff') {
@@ -57,32 +54,26 @@ function App() {
     }
   }, [location.pathname]);
 
-  // Si cambia el authMode y no es login/registro de restaurante,
-  // y estamos logueados, necesitamos que se recargue el usuario real
-  useEffect(() => {
-    if (user && authMode !== 'restaurant-login' && authMode !== 'restaurant-registration-resume' && user.joinedDate === '') {
-       // Esto indica que tenemos el "Mock user" temporal, debemos recargar
-       // Pero NO lo hacemos si user es null (logout)
-       setIsLoading(true);
-       setUser(null); // Forzar recarga
-    }
-  }, [authMode]);
+  // ELIMINADO: useEffect que forzaba recarga de usuario. 
+  // Ya no es necesario porque el flujo centralizado carga lo correcto desde el principio.
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      // SI ESTAMOS EN MODO LOGIN DE RESTAURANTE O REANUDANDO REGISTRO, NO HACEMOS NADA AQUÍ
-      // Dejamos que UserAuth maneje la redirección si hay borrador.
-      // IMPORTANTE: Bloquear tanto 'restaurant-login' como 'restaurant-registration-resume' para evitar redirecciones indeseadas.
-      if (authMode === 'restaurant-login' || authMode === 'restaurant-registration-resume') {
-          setIsLoading(false);
-          // Solo si hay usuario (login exitoso), ponemos el mock. Si no, dejamos user en null.
-          if (firebaseUser) {
-             setUser({ id: firebaseUser.uid, name: firebaseUser.displayName || 'Partner', email: firebaseUser.email || '', role: 'restaurant', status: 'active', joinedDate: '' }); 
-          }
-          return;
-      }
-
       if (firebaseUser) {
+        // Verificar SIEMPRE primero si es un restaurante con registro pendiente (Borrador)
+        // Esto tiene prioridad sobre cualquier otro rol
+        try {
+          const draftDoc = await getDoc(doc(db, "restaurant_requests", firebaseUser.uid));
+          if (draftDoc.exists() && draftDoc.data().status === 'draft') {
+            console.log("Detectado borrador de restaurante. Redirigiendo a registro...");
+            setResumeData(draftDoc.data());
+            setAuthMode('restaurant-registration-resume');
+            setIsLoading(false);
+            return; // Detener flujo aquí, no cargar usuario normal
+          }
+        } catch (error) {
+          console.error("Error verificando borrador:", error);
+        }
 
         try {
           console.log("Usuario autenticado:", firebaseUser.email);
