@@ -12,7 +12,10 @@ interface StaffDashboardProps {
 }
 
 export function StaffDashboard({ name, role, email, state, onLogout }: StaffDashboardProps) {
-  if (role === 'Onboarding Supervisor') {
+  // Normalize role string for comparison
+  const normalizedRole = role ? role.toLowerCase().trim() : '';
+  
+  if (normalizedRole === 'onboarding supervisor' || normalizedRole === 'onboarding_supervisor') {
     return <OnboardingDashboard name={name} email={email} onLogout={onLogout} role={role} state={state} />;
   }
 
