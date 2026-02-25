@@ -6,7 +6,7 @@ import { Footer } from '../components/Footer';
 import { db, storage, auth } from '../firebase';
 import { collection, doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { Save } from 'lucide-react';
 
 interface RestaurantRegistrationProps {
@@ -572,6 +572,9 @@ export function RestaurantRegistration({ onBack, initialData }: RestaurantRegist
       };
 
       await setDoc(draftRef, dataToSave, { merge: true });
+
+      // Cerrar sesión para asegurar que no quede usuario autenticado
+      await signOut(auth);
 
       setIsDraftSaved(true);
     } catch (error: any) {
