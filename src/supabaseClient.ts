@@ -211,6 +211,15 @@ export interface ZoneCampaignConfig {
   active_campaigns: number;
 }
 
+export interface DiscoverySectionItem {
+  id: string;
+  name: string; // Nombre del plato
+  image_url: string;
+  price?: string;
+  restaurant_name?: string;
+  restaurant_id?: string; // Opcional, para linkear al restaurante
+}
+
 export interface DiscoveryConfig {
   id: string;
   zone_id: number;

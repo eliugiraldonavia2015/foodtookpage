@@ -76,6 +76,12 @@ export const BannerManagerPage = () => {
   const [catConfigLoading, setCatConfigLoading] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Partial<CategoryItem> | null>(null);
   const [editingSectionTitle, setEditingSectionTitle] = useState<string | null>(null); // Para crear nueva sección
+  
+  // Estado para el modal de items de sección
+  const [editingSectionItem, setEditingSectionItem] = useState<{
+    sectionId: string;
+    item?: Partial<any>; // DiscoverySectionItem
+  } | null>(null);
 
   // Inicialización
   useEffect(() => {
@@ -366,7 +372,7 @@ export const BannerManagerPage = () => {
     handleUpdateSectionItems(sectionId, newItems);
   };
 
-  const handleDeleteSectionItem = (sectionId: string, itemId: string) => {
+  const handleDeleteLegacySectionItem = (sectionId: string, itemId: string) => {
     const section = sections.find(s => s.id === sectionId);
     if (!section) return;
     const newItems = section.items.filter((i: any) => i.id !== itemId);
@@ -461,6 +467,74 @@ export const BannerManagerPage = () => {
     }
   };
 
+
+  const handleSaveSectionItem = async () => {
+    if (!editingSectionItem || !editingSectionItem.item?.name || !editingSectionItem.item?.image_url) {
+      alert("Nombre e Imagen son obligatorios");
+      return;
+    }
+
+    const { sectionId, item } = editingSectionItem;
+    const newItem = {
+      id: item.id || crypto.randomUUID(),
+      name: item.name,
+      image_url: item.image_url,
+      price: item.price,
+      restaurant_name: item.restaurant_name,
+      restaurant_id: item.restaurant_id
+    };
+
+    const newSections = customSections.map(section => {
+      if (section.id === sectionId) {
+        const currentItems = section.items || [];
+        const itemExists = currentItems.find((i: any) => i.id === newItem.id);
+        
+        let newItems;
+        if (itemExists) {
+          newItems = currentItems.map((i: any) => i.id === newItem.id ? newItem : i);
+        } else {
+          newItems = [...currentItems, newItem];
+        }
+        return { ...section, items: newItems };
+      }
+      return section;
+    });
+
+    setCustomSections(newSections);
+    await handleSaveCustomSections(newSections);
+    setEditingSectionItem(null);
+  };
+
+  const handleDeleteSectionItem = (sectionId: string, itemId: string) => {
+    if (confirm("¿Eliminar este ítem?")) {
+      const newSections = customSections.map(section => {
+        if (section.id === sectionId) {
+          return { ...section, items: (section.items || []).filter((i: any) => i.id !== itemId) };
+        }
+        return section;
+      });
+      setCustomSections(newSections);
+      handleSaveCustomSections(newSections);
+    }
+  };
+
+  const handleItemImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0 && editingSectionItem) {
+      const file = e.target.files[0];
+      setUploading(true);
+      try {
+        const publicUrl = await uploadBannerImage(file); // Reusamos la función de upload
+        setEditingSectionItem({
+          ...editingSectionItem,
+          item: { ...editingSectionItem.item, image_url: publicUrl }
+        });
+      } catch (error) {
+        console.error(error);
+        alert("Error al subir imagen");
+      }
+      setUploading(false);
+    }
+  };
 
   const selectedZoneName = zones.find(z => z.zone_id === selectedZoneId)?.zone_name || 'Zona';
 
@@ -871,7 +945,12 @@ export const BannerManagerPage = () => {
                         <div className="flex justify-between items-center mb-4">
                           <h3 className="text-lg font-bold text-white">{section.title}</h3>
                           <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button className="text-xs bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg">Editar Items (Próximamente)</button>
+                            <button 
+                              onClick={() => setEditingSectionItem({ sectionId: section.id, item: {} })}
+                              className="text-xs bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg text-white font-bold flex items-center gap-2"
+                            >
+                              <Plus size={12} /> Añadir Ítem
+                            </button>
                             <button onClick={() => handleDeleteCustomSection(section.id)} className="text-rose-400 hover:bg-rose-500/10 p-2 rounded-lg"><Trash2 size={16} /></button>
                           </div>
                         </div>
@@ -881,12 +960,46 @@ export const BannerManagerPage = () => {
                           <div className="border-2 border-dashed border-white/10 rounded-xl p-8 flex flex-col items-center justify-center text-center bg-slate-950/30">
                             <Layers className="text-slate-600 mb-2" size={32} />
                             <p className="text-slate-400 font-bold mb-1">{section.title}</p>
-                            <p className="text-xs text-slate-500">Esta sección está vacía. Añade productos para que sea visible.</p>
+                            <p className="text-xs text-slate-500 mb-4">Esta sección está vacía. Añade productos para que sea visible.</p>
+                            <button 
+                              onClick={() => setEditingSectionItem({ sectionId: section.id, item: {} })}
+                              className="text-xs bg-brand-pink/10 text-brand-pink hover:bg-brand-pink/20 px-4 py-2 rounded-lg font-bold"
+                            >
+                              + Añadir Primer Producto
+                            </button>
                           </div>
                         ) : (
-                          <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-thin">
-                             {/* Aquí irían los items si los hubiera */}
-                             <div className="text-slate-500 text-sm">Items configurados ({section.items.length})</div>
+                          <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin">
+                             {section.items.map((item: any) => (
+                               <div key={item.id} className="w-32 shrink-0 bg-slate-800 border border-white/5 rounded-xl overflow-hidden group/item relative">
+                                 <div className="h-24 bg-slate-700 relative">
+                                   <img src={item.image_url} className="w-full h-full object-cover" />
+                                   <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2 pt-4">
+                                     <p className="text-xs font-bold text-white truncate">{item.price}</p>
+                                   </div>
+                                 </div>
+                                 <div className="p-2 space-y-0.5">
+                                   <p className="text-xs font-bold text-white truncate" title={item.name}>{item.name}</p>
+                                   <p className="text-[10px] text-slate-400 truncate">{item.restaurant_name || 'Restaurante'}</p>
+                                 </div>
+                                 
+                                 {/* Botones de acción del item */}
+                                 <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity">
+                                   <button 
+                                     onClick={() => setEditingSectionItem({ sectionId: section.id, item })}
+                                     className="p-1 bg-black/50 hover:bg-black/80 text-white rounded backdrop-blur-sm"
+                                   >
+                                     <Edit2 size={10} />
+                                   </button>
+                                   <button 
+                                     onClick={() => handleDeleteSectionItem(section.id, item.id)}
+                                     className="p-1 bg-rose-500/80 hover:bg-rose-500 text-white rounded backdrop-blur-sm"
+                                   >
+                                     <X size={10} />
+                                   </button>
+                                 </div>
+                               </div>
+                             ))}
                           </div>
                         )}
                       </div>
@@ -911,14 +1024,101 @@ export const BannerManagerPage = () => {
                               type="text" 
                               value={editingSectionTitle} 
                               onChange={e => setEditingSectionTitle(e.target.value)} 
-                              className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 outline-none focus:border-brand-pink" 
+                              className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 outline-none focus:border-brand-pink text-white" 
                               placeholder="Ej: Platillos en Tendencia"
                               autoFocus
                             />
                           </div>
                           <div className="flex gap-2 mt-4">
-                            <button onClick={() => setEditingSectionTitle(null)} className="flex-1 py-2 bg-white/5 rounded-xl font-bold text-sm">Cancelar</button>
-                            <button onClick={handleAddCustomSection} disabled={!editingSectionTitle.trim()} className="flex-1 py-2 bg-brand-pink rounded-xl font-bold text-sm disabled:opacity-50">Crear</button>
+                            <button onClick={() => setEditingSectionTitle(null)} className="flex-1 py-2 bg-white/5 rounded-xl font-bold text-sm text-white hover:bg-white/10">Cancelar</button>
+                            <button onClick={handleAddCustomSection} disabled={!editingSectionTitle.trim()} className="flex-1 py-2 bg-brand-pink rounded-xl font-bold text-sm disabled:opacity-50 text-white">Crear</button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* MODAL EDITAR ITEM DE SECCIÓN */}
+                  {editingSectionItem && (
+                    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                      <div className="bg-slate-900 border border-white/10 rounded-2xl w-full max-w-md p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-6">
+                          <h3 className="text-lg font-bold text-white">
+                            {editingSectionItem.item?.id ? 'Editar Producto' : 'Añadir Producto'}
+                          </h3>
+                          <button onClick={() => setEditingSectionItem(null)} className="text-slate-400 hover:text-white"><X size={20} /></button>
+                        </div>
+                        
+                        <div className="space-y-4">
+                          {/* Imagen */}
+                          <div className="flex justify-center mb-4">
+                            <div className="relative w-32 h-32 bg-slate-800 rounded-xl overflow-hidden border border-white/10 group cursor-pointer">
+                              {editingSectionItem.item?.image_url ? (
+                                <img src={editingSectionItem.item.image_url} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex flex-col items-center justify-center text-slate-500 gap-2">
+                                  <Upload size={24} />
+                                  <span className="text-[10px] uppercase font-bold">Subir Foto</span>
+                                </div>
+                              )}
+                              <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleItemImageUpload} />
+                              {uploading && <div className="absolute inset-0 bg-black/50 flex items-center justify-center"><div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div></div>}
+                            </div>
+                          </div>
+
+                          {/* Campos */}
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="col-span-2">
+                              <label className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1 block">Nombre del Plato</label>
+                              <input 
+                                type="text" 
+                                value={editingSectionItem.item?.name || ''} 
+                                onChange={e => setEditingSectionItem({...editingSectionItem, item: {...editingSectionItem.item, name: e.target.value}})} 
+                                className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-brand-pink text-white" 
+                                placeholder="Ej: Salmon Rice Bowl" 
+                              />
+                            </div>
+                            
+                            <div>
+                              <label className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1 block">Precio</label>
+                              <input 
+                                type="text" 
+                                value={editingSectionItem.item?.price || ''} 
+                                onChange={e => setEditingSectionItem({...editingSectionItem, item: {...editingSectionItem.item, price: e.target.value}})} 
+                                className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-brand-pink text-white" 
+                                placeholder="Ej: $12.50" 
+                              />
+                            </div>
+
+                            <div>
+                              <label className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1 block">Restaurante</label>
+                              <input 
+                                type="text" 
+                                value={editingSectionItem.item?.restaurant_name || ''} 
+                                onChange={e => setEditingSectionItem({...editingSectionItem, item: {...editingSectionItem.item, restaurant_name: e.target.value}})} 
+                                className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-brand-pink text-white" 
+                                placeholder="Ej: Tokyo Eats" 
+                              />
+                            </div>
+                            
+                            {/* Selector de restaurante (Opcional - Futuro) */}
+                            {/* <div className="col-span-2">
+                              <label className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1 block">Vincular Restaurante (Opcional)</label>
+                              <select className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-brand-pink text-slate-400">
+                                <option>Seleccionar de la lista...</option>
+                                {allRestaurants.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                              </select>
+                            </div> */}
+                          </div>
+
+                          <div className="pt-4 border-t border-white/5 mt-4">
+                            <button 
+                              onClick={handleSaveSectionItem} 
+                              disabled={!editingSectionItem.item?.name || !editingSectionItem.item?.image_url}
+                              className="w-full bg-brand-pink hover:bg-brand-pink/90 text-white font-bold py-3 rounded-xl shadow-lg shadow-brand-pink/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <Save size={18} /> Guardar Producto
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -959,7 +1159,7 @@ export const BannerManagerPage = () => {
                             </div>
                             <span className="text-xs font-bold text-center leading-tight">{item.name}</span>
                             <button 
-                              onClick={() => handleDeleteSectionItem(section.id, item.id)}
+                              onClick={() => handleDeleteLegacySectionItem(section.id, item.id)}
                               className="absolute -top-1 -right-1 p-1 bg-rose-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
                             >
                               <X size={10} />
@@ -985,7 +1185,7 @@ export const BannerManagerPage = () => {
                               <p className="text-[10px] text-slate-400">Destacado</p>
                             </div>
                             <button 
-                              onClick={() => handleDeleteSectionItem(section.id, item.id)}
+                              onClick={() => handleDeleteLegacySectionItem(section.id, item.id)}
                               className="absolute top-1 right-1 p-1 bg-rose-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
                             >
                               <X size={10} />
