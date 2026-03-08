@@ -167,7 +167,8 @@ export const BannerManagerPage = () => {
     setUploading(true);
     try {
       const croppedImageBlob = await getCroppedImg(cropImage, croppedAreaPixels);
-      const file = new File([croppedImageBlob], `banner-${Date.now()}.jpg`, { type: 'image/jpeg' });
+      if (!croppedImageBlob) throw new Error("Error al recortar imagen");
+      const file = new File([croppedImageBlob as Blob], `banner-${Date.now()}.jpg`, { type: 'image/jpeg' });
       const publicUrl = await uploadBannerImage(file);
       
       const newSlide: BannerSlide = {
