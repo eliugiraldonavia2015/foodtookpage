@@ -131,6 +131,19 @@ export const BannerManagerPage = () => {
   };
 
   useEffect(() => {
+    if (activeTab !== 'banners' || selectedScreen !== 'discovery' || editingBanner) return;
+    if (banners.length > 0) {
+      setEditingBanner(banners[0]);
+      return;
+    }
+    setEditingBanner({
+      screen_id: 'discovery',
+      title: 'Card Hero Discovery',
+      is_active: true
+    });
+  }, [activeTab, selectedScreen, banners, editingBanner]);
+
+  useEffect(() => {
     if (editingBanner) {
       if (editingBanner.slides && editingBanner.slides.length > 0) {
         setSlides(editingBanner.slides);
@@ -543,14 +556,18 @@ export const BannerManagerPage = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-4">
               <div className="flex justify-between items-center mb-2">
-                <h2 className="text-lg font-bold">Campañas Activas</h2>
-                <button onClick={() => setEditingBanner({ is_active: true })} className="text-sm text-brand-pink font-bold hover:underline">+ Nueva</button>
+                <h2 className="text-lg font-bold">{selectedScreen === 'discovery' ? 'Card Hero Discovery' : 'Campañas Activas'}</h2>
+                {selectedScreen !== 'discovery' && (
+                  <button onClick={() => setEditingBanner({ is_active: true })} className="text-sm text-brand-pink font-bold hover:underline">+ Nueva</button>
+                )}
               </div>
               
               {loading ? (
                  <div className="flex justify-center py-12"><div className="w-8 h-8 border-2 border-brand-pink border-t-transparent rounded-full animate-spin"></div></div>
               ) : banners.length === 0 ? (
-                <div className="bg-slate-900/50 border border-dashed border-white/10 rounded-2xl p-12 text-center text-slate-500">Sin campañas activas</div>
+                <div className="bg-slate-900/50 border border-dashed border-white/10 rounded-2xl p-12 text-center text-slate-500">
+                  {selectedScreen === 'discovery' ? 'Card creada en modo edición. Agrega slides y guarda.' : 'Sin campañas activas'}
+                </div>
               ) : (
                 <div className="space-y-4">
                   {banners.map((banner) => (
@@ -596,7 +613,7 @@ export const BannerManagerPage = () => {
                   </div>
                 </motion.div>
               ) : (
-                <div className="bg-slate-900/30 border border-dashed border-white/5 rounded-2xl p-8 text-center text-slate-500 flex flex-col items-center justify-center h-64"><Zap size={32} className="mb-3 opacity-20" /><p className="text-sm">Selecciona una campaña para editar o crea una nueva.</p></div>
+                <div className="bg-slate-900/30 border border-dashed border-white/5 rounded-2xl p-8 text-center text-slate-500 flex flex-col items-center justify-center h-64"><Zap size={32} className="mb-3 opacity-20" /><p className="text-sm">{selectedScreen === 'discovery' ? 'Abre la card principal para editar imágenes y slides.' : 'Selecciona una campaña para editar o crea una nueva.'}</p></div>
               )}
             </div>
           </div>
