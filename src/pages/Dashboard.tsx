@@ -1021,6 +1021,7 @@ const ZoneDiscoveryManager = () => {
   const [zones, setZones] = useState<Zone[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedZone, setSelectedZone] = useState<Zone | null>(null);
+  const [filterZoneId, setFilterZoneId] = useState<string>('all');
 
   useEffect(() => {
     const fetchZones = async () => {
@@ -1034,13 +1035,17 @@ const ZoneDiscoveryManager = () => {
     fetchZones();
   }, []);
 
+  const filteredZones = filterZoneId === 'all' 
+    ? zones 
+    : zones.filter(z => z.zone_id.toString() === filterZoneId);
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="bg-slate-950/70 p-6 rounded-[22px] border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.45)]"
     >
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
         <div>
           <h3 className="text-xl font-bold text-white flex items-center gap-2">
             <Zap className="text-amber-400" size={24} />
@@ -1050,9 +1055,25 @@ const ZoneDiscoveryManager = () => {
             Gestiona la exposición y campañas publicitarias activas por zona geográfica.
           </p>
         </div>
-        <button className="px-4 py-2 bg-brand-pink text-white rounded-xl text-sm font-bold hover:bg-brand-pink/90 transition-colors">
-          Nueva Campaña
-        </button>
+        
+        <div className="flex items-center gap-3">
+          <select 
+            value={filterZoneId}
+            onChange={(e) => setFilterZoneId(e.target.value)}
+            className="bg-slate-900 border border-white/10 text-white text-sm rounded-xl px-3 py-2 focus:ring-2 focus:ring-brand-pink outline-none"
+          >
+            <option value="all">Todas las Zonas</option>
+            {zones.map(zone => (
+              <option key={zone.zone_id} value={zone.zone_id}>
+                {zone.zone_name}
+              </option>
+            ))}
+          </select>
+
+          <button className="px-4 py-2 bg-brand-pink text-white rounded-xl text-sm font-bold hover:bg-brand-pink/90 transition-colors whitespace-nowrap">
+            Nueva Campaña
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -1061,7 +1082,7 @@ const ZoneDiscoveryManager = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {zones.map((zone) => (
+          {filteredZones.map((zone) => (
             <div 
               key={zone.zone_id} 
               className={`p-4 rounded-xl border transition-all cursor-pointer ${
