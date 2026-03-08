@@ -1008,7 +1008,118 @@ const GeoSection = () => {
            </div>
         </div>
       </div>
+      
+      <ZoneDiscoveryManager />
     </div>
+  );
+};
+
+// --- Componente para gestión de campañas por zona (Integrado con Supabase) ---
+import { getZones, Zone } from '../supabaseClient';
+
+const ZoneDiscoveryManager = () => {
+  const [zones, setZones] = useState<Zone[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedZone, setSelectedZone] = useState<Zone | null>(null);
+
+  useEffect(() => {
+    const fetchZones = async () => {
+      setLoading(true);
+      const data = await getZones();
+      setZones(data);
+      setLoading(false);
+    };
+    fetchZones();
+  }, []);
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-slate-950/70 p-6 rounded-[22px] border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.45)]"
+    >
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h3 className="text-xl font-bold text-white flex items-center gap-2">
+            <Zap className="text-amber-400" size={24} />
+            Discovery Boost Manager
+          </h3>
+          <p className="text-sm text-slate-400 mt-1">
+            Gestiona la exposición y campañas publicitarias activas por zona geográfica.
+          </p>
+        </div>
+        <button className="px-4 py-2 bg-brand-pink text-white rounded-xl text-sm font-bold hover:bg-brand-pink/90 transition-colors">
+          Nueva Campaña
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-12">
+          <div className="w-8 h-8 border-2 border-brand-pink border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {zones.map((zone) => (
+            <div 
+              key={zone.zone_id} 
+              className={`p-4 rounded-xl border transition-all cursor-pointer ${
+                selectedZone?.zone_id === zone.zone_id 
+                  ? 'bg-white/10 border-brand-pink ring-1 ring-brand-pink' 
+                  : 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10'
+              }`}
+              onClick={() => setSelectedZone(zone)}
+            >
+              <div className="flex justify-between items-start mb-3">
+                <h4 className="font-bold text-white text-lg">{zone.zone_name}</h4>
+                {zone.campaign_id ? (
+                  <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-[10px] font-bold rounded-full border border-emerald-500/20 uppercase tracking-wide">
+                    Activo
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 bg-slate-700 text-slate-400 text-[10px] font-bold rounded-full uppercase tracking-wide">
+                    Inactivo
+                  </span>
+                )}
+              </div>
+              
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-400">Usuarios Activos</span>
+                  <span className="text-white font-mono">{zone.active_users?.toLocaleString() || 0}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-400">Ads Vigentes</span>
+                  <span className="text-white font-mono">{zone.current_ads || 0}</span>
+                </div>
+                <div className="w-full bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden">
+                  <div 
+                    className="h-full bg-brand-pink rounded-full" 
+                    style={{ width: `${Math.min(((zone.active_users || 0) / 2000) * 100, 100)}%` }}
+                  ></div>
+                </div>
+              </div>
+
+              {selectedZone?.zone_id === zone.zone_id && (
+                <motion.div 
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="mt-4 pt-4 border-t border-white/10"
+                >
+                  <div className="grid grid-cols-2 gap-2">
+                    <button className="px-3 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-xs text-white font-medium border border-white/5 transition-colors">
+                      Ver Métricas
+                    </button>
+                    <button className="px-3 py-2 bg-brand-pink/20 hover:bg-brand-pink/30 text-brand-pink rounded-lg text-xs font-bold border border-brand-pink/20 transition-colors">
+                      Editar Boost
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </motion.div>
   );
 };
 
