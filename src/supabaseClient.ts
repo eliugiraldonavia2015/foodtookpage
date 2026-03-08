@@ -19,18 +19,29 @@ export interface Zone {
 export const getZones = async (): Promise<Zone[]> => {
   try {
     // Intentamos obtener las zonas de la tabla 'zones'
-    // Si la tabla no existe o falla, devolveremos datos mockeados pero con estructura correcta
     const { data, error } = await supabase
       .from('zones')
       .select('*');
       
     if (error) {
       console.warn('Supabase error fetching zones (using mocks):', error.message);
-      // Fallback a datos mockeados si falla la conexión real
+      return MOCK_ZONES;
+    }
+
+    // Si la tabla existe pero está vacía, o si la data es null, usamos mocks para demo
+    if (!data || data.length === 0) {
+      console.log('No zones found in DB, using mocks');
       return MOCK_ZONES;
     }
     
-    return data || [];
+    // Si hay datos reales, los mapeamos para asegurar que tengan campos de UI
+    // (active_users y current_ads podrían no venir de la DB)
+    return data.map(zone => ({
+      ...zone,
+      active_users: zone.active_users || Math.floor(Math.random() * 1500) + 200, // Fallback random si no viene de DB
+      current_ads: zone.current_ads || Math.floor(Math.random() * 10) // Fallback random si no viene de DB
+    }));
+
   } catch (e) {
     console.error('Exception fetching zones:', e);
     return MOCK_ZONES;
