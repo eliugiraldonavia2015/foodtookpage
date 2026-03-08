@@ -15,6 +15,7 @@ import { DishRequests } from './pages/DishRequests';
 import { RestaurantRequests } from './pages/RestaurantRequests';
 import { Dashboard } from './pages/Dashboard';
 import { WelcomePage } from './pages/WelcomePage';
+import { BannerManagerPage } from './pages/BannerManagerPage';
 import { User, Tab, Restaurant } from './types';
 import { Bell, Search, Settings, Download, Menu } from 'lucide-react';
 import { exportToCSV } from './utils/csvExport';
@@ -306,6 +307,11 @@ function App() {
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-pink"></div>
       </div>
     );
+  }
+
+  // Ruta Especial: Gestor de Banners (accesible si hay usuario o para testeo)
+  if (location.pathname === '/banners-manager') {
+    return <BannerManagerPage />;
   }
 
   if (!user) {
