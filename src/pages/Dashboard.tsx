@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   DollarSign, Activity, ArrowUpRight, ArrowDownRight, 
@@ -1019,87 +1020,7 @@ import { getZones, inspectSchema, getBanners, createBanner, updateBanner, delete
 import { Plus, Trash2, Edit2, Image as ImageIcon, Save, X as XIcon, Eye, EyeOff, Move } from 'lucide-react';
 
 const ZoneDiscoveryManager = () => {
-  const [zones, setZones] = useState<Zone[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedZone, setSelectedZone] = useState<Zone | null>(null);
-  const [filterZoneId, setFilterZoneId] = useState<string>('all');
-  
-  // Estados para Banners
-  const [banners, setBanners] = useState<Banner[]>([]);
-  const [loadingBanners, setLoadingBanners] = useState(false);
-  const [showBannerEditor, setShowBannerEditor] = useState(false);
-  const [editingBanner, setEditingBanner] = useState<Partial<Banner>>({});
-
-  useEffect(() => {
-    const fetchZones = async () => {
-      setLoading(true);
-      await inspectSchema(); 
-      const data = await getZones();
-      setZones(data);
-      setLoading(false);
-    };
-    fetchZones();
-  }, []);
-
-  // Cargar banners cuando se selecciona una zona
-  useEffect(() => {
-    if (selectedZone) {
-      fetchBanners(selectedZone.zone_id);
-    } else {
-      setBanners([]);
-    }
-  }, [selectedZone]);
-
-  const fetchBanners = async (zoneId: number) => {
-    setLoadingBanners(true);
-    const data = await getBanners(zoneId);
-    setBanners(data);
-    setLoadingBanners(false);
-  };
-
-  const handleSaveBanner = async () => {
-    if (!selectedZone || !editingBanner.title || !editingBanner.image_url) return;
-
-    try {
-      const bannerData = {
-        zone_id: selectedZone.zone_id,
-        title: editingBanner.title,
-        subtitle: editingBanner.subtitle || '',
-        image_url: editingBanner.image_url,
-        action_type: editingBanner.action_type || 'none',
-        action_target: editingBanner.action_target || '',
-        is_active: editingBanner.is_active ?? true,
-        priority: editingBanner.priority || (banners.length + 1)
-      };
-
-      if (editingBanner.id) {
-        await updateBanner(editingBanner.id, bannerData);
-      } else {
-        await createBanner(bannerData as any);
-      }
-
-      await fetchBanners(selectedZone.zone_id);
-      setShowBannerEditor(false);
-      setEditingBanner({});
-    } catch (error) {
-      console.error("Error saving banner:", error);
-      alert("Error guardando banner. Revisa la consola.");
-    }
-  };
-
-  const handleDeleteBanner = async (id: string) => {
-    if (!confirm("¿Estás seguro de eliminar este banner?")) return;
-    try {
-      await deleteBanner(id);
-      if (selectedZone) fetchBanners(selectedZone.zone_id);
-    } catch (error) {
-      console.error("Error deleting banner:", error);
-    }
-  };
-
-  const filteredZones = filterZoneId === 'all' 
-    ? zones 
-    : zones.filter(z => z.zone_id.toString() === filterZoneId);
+  const navigate = useNavigate();
 
   return (
     <motion.div 
@@ -1107,235 +1028,25 @@ const ZoneDiscoveryManager = () => {
       animate={{ opacity: 1, y: 0 }}
       className="bg-slate-950/70 p-6 rounded-[22px] border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.45)]"
     >
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
         <div>
           <h3 className="text-xl font-bold text-white flex items-center gap-2">
             <Zap className="text-amber-400" size={24} />
             Discovery Boost Manager
           </h3>
-          <p className="text-sm text-slate-400 mt-1">
-            Gestiona la exposición y campañas publicitarias activas por zona geográfica.
+          <p className="text-sm text-slate-400 mt-1 max-w-2xl">
+            Gestiona las campañas publicitarias, banners y promociones destacadas en la app por zona geográfica.
           </p>
         </div>
         
-        <div className="flex items-center gap-3">
-          <select 
-            value={filterZoneId}
-            onChange={(e) => setFilterZoneId(e.target.value)}
-            className="bg-slate-900 border border-white/10 text-white text-sm rounded-xl px-3 py-2 focus:ring-2 focus:ring-brand-pink outline-none"
-          >
-            <option value="all">Todas las Zonas</option>
-            {zones.map(zone => (
-              <option key={zone.zone_id} value={zone.zone_id}>
-                {zone.zone_name}
-              </option>
-            ))}
-          </select>
-        </div>
+        <button 
+          onClick={() => navigate('/banners-manager')}
+          className="bg-brand-pink hover:bg-brand-pink/90 text-white px-6 py-3 rounded-xl font-bold text-sm flex items-center gap-2 transition-all shadow-lg shadow-brand-pink/20 shrink-0"
+        >
+          Gestionar Campañas
+          <ArrowUpRight size={18} />
+        </button>
       </div>
-
-      {loading ? (
-        <div className="flex justify-center py-12">
-          <div className="w-8 h-8 border-2 border-brand-pink border-t-transparent rounded-full animate-spin"></div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredZones.map((zone) => (
-            <div 
-              key={zone.zone_id} 
-              className={`p-4 rounded-xl border transition-all cursor-pointer ${
-                selectedZone?.zone_id === zone.zone_id 
-                  ? 'bg-white/10 border-brand-pink ring-1 ring-brand-pink' 
-                  : 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10'
-              }`}
-              onClick={() => setSelectedZone(zone)}
-            >
-              <div className="flex justify-between items-start mb-3">
-                <h4 className="font-bold text-white text-lg">{zone.zone_name}</h4>
-                {zone.campaign_id ? (
-                  <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-[10px] font-bold rounded-full border border-emerald-500/20 uppercase tracking-wide">
-                    Activo
-                  </span>
-                ) : (
-                  <span className="px-2 py-0.5 bg-slate-700 text-slate-400 text-[10px] font-bold rounded-full uppercase tracking-wide">
-                    Inactivo
-                  </span>
-                )}
-              </div>
-              
-              <div className="space-y-2">
-                <div className="flex justify-between text-xs">
-                  <span className="text-slate-400">Usuarios Activos</span>
-                  <span className="text-white font-mono">{zone.active_users?.toLocaleString() || 0}</span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-slate-400">Ads Vigentes</span>
-                  <span className="text-white font-mono">{zone.current_ads || 0}</span>
-                </div>
-                <div className="w-full bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden">
-                  <div 
-                    className="h-full bg-brand-pink rounded-full" 
-                    style={{ width: `${Math.min(((zone.active_users || 0) / 2000) * 100, 100)}%` }}
-                  ></div>
-                </div>
-              </div>
-
-              {selectedZone?.zone_id === zone.zone_id && (
-                <motion.div 
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  className="mt-4 pt-4 border-t border-white/10"
-                >
-                  <div className="flex justify-between items-center mb-3">
-                    <h5 className="text-sm font-semibold text-white">Banners Activos</h5>
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEditingBanner({ zone_id: zone.zone_id, is_active: true });
-                        setShowBannerEditor(true);
-                      }}
-                      className="p-1.5 bg-brand-pink text-white rounded-lg hover:bg-brand-pink/90"
-                    >
-                      <Plus size={14} />
-                    </button>
-                  </div>
-
-                  {loadingBanners ? (
-                    <p className="text-xs text-slate-400 text-center py-2">Cargando banners...</p>
-                  ) : banners.length === 0 ? (
-                    <p className="text-xs text-slate-500 text-center py-2 border border-dashed border-white/10 rounded-lg">
-                      Sin banners configurados
-                    </p>
-                  ) : (
-                    <div className="space-y-2">
-                      {banners.map(banner => (
-                        <div key={banner.id} className="flex items-center gap-2 bg-slate-900 p-2 rounded-lg border border-white/5 group">
-                          <img src={banner.image_url} alt={banner.title} className="w-10 h-10 rounded object-cover bg-slate-800" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-bold text-white truncate">{banner.title}</p>
-                            <p className="text-[10px] text-slate-400 truncate">{banner.subtitle || 'Sin subtítulo'}</p>
-                          </div>
-                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button 
-                              onClick={(e) => { e.stopPropagation(); setEditingBanner(banner); setShowBannerEditor(true); }}
-                              className="p-1 hover:bg-white/10 rounded text-slate-300"
-                            >
-                              <Edit2 size={12} />
-                            </button>
-                            <button 
-                              onClick={(e) => { e.stopPropagation(); handleDeleteBanner(banner.id); }}
-                              className="p-1 hover:bg-rose-500/20 rounded text-rose-400"
-                            >
-                              <Trash2 size={12} />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </motion.div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Modal Editor de Banners */}
-      {showBannerEditor && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowBannerEditor(false)}>
-          <div className="bg-slate-900 border border-white/10 rounded-2xl w-full max-w-md p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-bold text-white">
-                {editingBanner.id ? 'Editar Banner' : 'Nuevo Banner'}
-              </h3>
-              <button onClick={() => setShowBannerEditor(false)} className="text-slate-400 hover:text-white">
-                <XIcon size={20} />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div className="bg-blue-500/10 border border-blue-500/20 p-3 rounded-xl flex items-start gap-3">
-                <ImageIcon className="text-blue-400 shrink-0 mt-0.5" size={18} />
-                <p className="text-xs text-blue-200">
-                  Sube una imagen que ya contenga el diseño completo (texto, botones, etc). 
-                  La app solo la mostrará tal cual.
-                </p>
-              </div>
-
-              <div>
-                <label className="text-xs text-slate-400 block mb-1">Nombre interno (Referencia)</label>
-                <input 
-                  type="text" 
-                  value={editingBanner.title || ''}
-                  onChange={e => setEditingBanner({...editingBanner, title: e.target.value})}
-                  className="w-full bg-slate-800 border border-white/10 rounded-xl px-3 py-2 text-white text-sm focus:border-brand-pink outline-none"
-                  placeholder="Ej: Promo Verano 2025"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs text-slate-400 block mb-1">URL de Imagen del Banner</label>
-                <div className="flex gap-2">
-                  <input 
-                    type="text" 
-                    value={editingBanner.image_url || ''}
-                    onChange={e => setEditingBanner({...editingBanner, image_url: e.target.value})}
-                    className="w-full bg-slate-800 border border-white/10 rounded-xl px-3 py-2 text-white text-sm focus:border-brand-pink outline-none"
-                    placeholder="https://..."
-                  />
-                </div>
-                {editingBanner.image_url && (
-                  <img src={editingBanner.image_url} alt="Preview" className="w-full h-32 object-cover rounded-xl mt-2 border border-white/5" />
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs text-slate-400 block mb-1">Al tocar, abrir:</label>
-                  <select 
-                    value={editingBanner.action_type || 'none'}
-                    onChange={e => setEditingBanner({...editingBanner, action_type: e.target.value as any})}
-                    className="w-full bg-slate-800 border border-white/10 rounded-xl px-3 py-2 text-white text-sm outline-none"
-                  >
-                    <option value="none">Nada (Solo ver)</option>
-                    <option value="open_restaurant">Restaurante</option>
-                    <option value="open_category">Categoría</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs text-slate-400 block mb-1">ID Destino</label>
-                  <input 
-                    type="text" 
-                    value={editingBanner.action_target || ''}
-                    onChange={e => setEditingBanner({...editingBanner, action_target: e.target.value})}
-                    className="w-full bg-slate-800 border border-white/10 rounded-xl px-3 py-2 text-white text-sm outline-none"
-                    placeholder="Ej: rest_123"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 pt-2">
-                 <input 
-                    type="checkbox" 
-                    id="isActive"
-                    checked={editingBanner.is_active ?? true}
-                    onChange={e => setEditingBanner({...editingBanner, is_active: e.target.checked})}
-                    className="rounded border-white/10 bg-slate-800 text-brand-pink focus:ring-brand-pink"
-                 />
-                 <label htmlFor="isActive" className="text-sm text-white cursor-pointer select-none">Banner Activo</label>
-              </div>
-
-              <button 
-                onClick={handleSaveBanner}
-                className="w-full bg-brand-pink hover:bg-brand-pink/90 text-white font-bold py-3 rounded-xl mt-4 flex items-center justify-center gap-2 transition-colors"
-              >
-                <Save size={18} />
-                Guardar Banner
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </motion.div>
   );
 };
