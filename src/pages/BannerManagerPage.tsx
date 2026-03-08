@@ -606,7 +606,85 @@ export const BannerManagerPage = () => {
                     <div><label className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-2 block">Nombre Interno</label><input type="text" value={editingBanner.title || ''} onChange={e => setEditingBanner({...editingBanner, title: e.target.value})} className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-brand-pink outline-none text-white" placeholder="Ej: Promo Pizza" /></div>
                     <div>
                       <div className="flex justify-between items-center mb-3"><label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Slides ({slides.length})</label><label className="cursor-pointer bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors"><Upload size={14} /> Añadir Foto <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} /></label></div>
-                      <div className="space-y-3">{slides.map((slide, index) => (<div key={slide.id} className="bg-slate-950 border border-white/10 rounded-xl p-3 relative group"><div className="flex gap-3"><div className="w-20 h-12 bg-black rounded-lg overflow-hidden shrink-0 relative"><img src={slide.image_url} className="w-full h-full object-cover" /><div className="absolute top-0 left-0 bg-black/60 px-1.5 rounded-br text-[10px] font-bold">#{index + 1}</div></div><div className="flex-1 space-y-2"><select value={slide.action_type} onChange={e => updateSlide(slide.id, { action_type: e.target.value as any })} className="w-full bg-slate-900 border border-white/10 rounded-lg px-2 py-1.5 text-xs outline-none"><option value="none">Solo Ver</option><option value="open_restaurant">Abrir Restaurante</option><option value="open_category">Abrir Categoría</option></select>{slide.action_type !== 'none' && (<input type="text" value={slide.action_target || ''} onChange={e => updateSlide(slide.id, { action_target: e.target.value })} className="w-full bg-slate-900 border border-white/10 rounded-lg px-2 py-1.5 text-xs outline-none" placeholder="ID Destino..." />)}</div><button onClick={() => removeSlide(slide.id)} className="text-slate-500 hover:text-rose-400 self-start"><Trash2 size={16} /></button></div></div>))}{slides.length === 0 && (<div className="text-center py-8 border border-dashed border-white/10 rounded-xl text-slate-500 text-sm">Sube una imagen para comenzar</div>)}</div>
+                      <div className="space-y-3">
+                        {slides.map((slide, index) => (
+                          <div key={slide.id} className="bg-slate-950 border border-white/10 rounded-xl p-3 relative group">
+                            <div className="flex gap-3">
+                              <div className="w-20 h-20 bg-black rounded-lg overflow-hidden shrink-0 relative">
+                                <img src={slide.image_url} className="w-full h-full object-cover" />
+                                <div className="absolute top-0 left-0 bg-black/60 px-1.5 rounded-br text-[10px] font-bold">#{index + 1}</div>
+                              </div>
+                              <div className="flex-1 space-y-2">
+                                <select 
+                                  value={slide.action_type} 
+                                  onChange={e => updateSlide(slide.id, { action_type: e.target.value as any })} 
+                                  className="w-full bg-slate-900 border border-white/10 rounded-lg px-2 py-1.5 text-xs outline-none"
+                                >
+                                  <option value="none">Solo Ver</option>
+                                  <option value="open_restaurant">Abrir Restaurante</option>
+                                  <option value="open_category">Abrir Categoría</option>
+                                </select>
+                                
+                                {slide.action_type !== 'none' && (
+                                  <input 
+                                    type="text" 
+                                    value={slide.action_target || ''} 
+                                    onChange={e => updateSlide(slide.id, { action_target: e.target.value })} 
+                                    className="w-full bg-slate-900 border border-white/10 rounded-lg px-2 py-1.5 text-xs outline-none" 
+                                    placeholder="ID Destino..." 
+                                  />
+                                )}
+
+                                {/* Configuración de Texto Overlay */}
+                                <div className="pt-2 border-t border-white/5">
+                                  <label className="flex items-center gap-2 mb-2 cursor-pointer">
+                                    <input 
+                                      type="checkbox" 
+                                      checked={slide.use_text_overlay || false} 
+                                      onChange={(e) => updateSlide(slide.id, { use_text_overlay: e.target.checked })}
+                                      className="rounded border-slate-700 bg-slate-800 text-brand-pink focus:ring-0"
+                                    />
+                                    <span className="text-xs font-bold text-slate-300">Texto superpuesto</span>
+                                  </label>
+
+                                  {slide.use_text_overlay && (
+                                    <div className="space-y-2 bg-slate-900/50 p-2 rounded-lg">
+                                      <div>
+                                        <label className="text-[10px] text-slate-500 font-bold uppercase block mb-1">Texto Principal</label>
+                                        <input 
+                                          type="text" 
+                                          value={slide.text_content || ''} 
+                                          onChange={e => updateSlide(slide.id, { text_content: e.target.value })} 
+                                          className="w-full bg-slate-950 border border-white/10 rounded px-2 py-1 text-xs outline-none text-white" 
+                                          placeholder="Ej: Gran Oferta" 
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="text-[10px] text-green-500 font-bold uppercase block mb-1">Texto Destacado (Verde/Dorado)</label>
+                                        <input 
+                                          type="text" 
+                                          value={slide.highlighted_text || ''} 
+                                          onChange={e => updateSlide(slide.id, { highlighted_text: e.target.value })} 
+                                          className="w-full bg-slate-950 border border-green-500/30 rounded px-2 py-1 text-xs outline-none text-green-400 font-bold" 
+                                          placeholder="Ej: 50% OFF" 
+                                        />
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              <button onClick={() => removeSlide(slide.id)} className="text-slate-500 hover:text-rose-400 self-start">
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                        {slides.length === 0 && (
+                          <div className="text-center py-8 border border-dashed border-white/10 rounded-xl text-slate-500 text-sm">
+                            Sube una imagen para comenzar
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <div className="pt-4 border-t border-white/5 flex items-center justify-between"><label className="flex items-center gap-3 cursor-pointer"><div className={`w-10 h-6 rounded-full p-1 transition-colors ${editingBanner.is_active !== false ? 'bg-emerald-500' : 'bg-slate-700'}`}><div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${editingBanner.is_active !== false ? 'translate-x-4' : 'translate-x-0'}`} /></div><span className="text-sm font-medium text-slate-300">Campaña Activa</span><input type="checkbox" className="hidden" checked={editingBanner.is_active !== false} onChange={e => setEditingBanner({...editingBanner, is_active: e.target.checked})} /></label></div>
                     <button onClick={handleSaveBanner} disabled={slides.length === 0} className="w-full bg-brand-pink hover:bg-brand-pink/90 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-brand-pink/20 flex items-center justify-center gap-2"><Save size={18} /> Guardar Campaña</button>

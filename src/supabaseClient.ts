@@ -21,6 +21,10 @@ export interface BannerSlide {
   image_url: string;
   action_type: 'open_restaurant' | 'open_category' | 'none';
   action_target?: string;
+  // Campos para texto superpuesto
+  use_text_overlay?: boolean;
+  text_content?: string;
+  highlighted_text?: string; // Parte del texto que va en negrita/color
 }
 
 export interface Banner {
