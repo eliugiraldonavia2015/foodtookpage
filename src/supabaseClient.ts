@@ -16,14 +16,22 @@ export interface Zone {
   current_ads?: number;
 }
 
+export interface BannerSlide {
+  id: string; // uuid para identificar el slide
+  image_url: string;
+  action_type: 'open_restaurant' | 'open_category' | 'none';
+  action_target?: string;
+}
+
 export interface Banner {
   id: string;
   zone_id: number;
   title: string; // Nombre interno para referencia
-  subtitle?: string; // Deprecado, pero mantenemos compatibilidad por si acaso
-  image_url: string;
-  action_type: 'open_restaurant' | 'open_category' | 'none';
-  action_target?: string;
+  subtitle?: string; // Deprecado
+  image_url: string; // Deprecado: se mantiene por compatibilidad, pero ahora usamos 'slides'
+  action_type: 'open_restaurant' | 'open_category' | 'none'; // Deprecado
+  action_target?: string; // Deprecado
+  slides?: BannerSlide[]; // Nuevo campo para múltiples slides
   is_active: boolean;
   priority: number;
   created_at?: string;
@@ -107,6 +115,26 @@ export const deleteBanner = async (id: string) => {
     .eq('id', id);
 
   if (error) throw error;
+};
+
+export const uploadBannerImage = async (file: File) => {
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${Math.random()}.${fileExt}`;
+  const filePath = `${fileName}`;
+
+  const { data, error } = await supabase.storage
+    .from('banners')
+    .upload(filePath, file);
+
+  if (error) {
+    throw error;
+  }
+
+  const { data: { publicUrl } } = supabase.storage
+    .from('banners')
+    .getPublicUrl(filePath);
+
+  return publicUrl;
 };
 
 // Función de utilidad para inspeccionar tablas (Solo desarrollo)
