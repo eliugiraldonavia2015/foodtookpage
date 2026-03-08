@@ -706,18 +706,10 @@ export const BannerManagerPage = () => {
             <div className="flex justify-between items-center">
               <div>
                 <h2 className="text-lg font-bold text-white">
-                  {selectedScreen === 'discovery' ? 'Categorías Visibles' : 'Diseño de Pantalla'}
+                  {selectedScreen === 'discovery' ? 'Diseño de Pantalla' : 'Diseño de Pantalla'}
                 </h2>
-                <p className="text-sm text-slate-400">Configura las secciones y categorías</p>
+                <p className="text-sm text-slate-400">Configura los elementos visibles en la pantalla</p>
               </div>
-              {selectedScreen === 'discovery' && (
-                <button 
-                  onClick={() => setEditingCategory({})} 
-                  className="bg-brand-pink text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2"
-                >
-                  <Plus size={16} /> Añadir Categoría
-                </button>
-              )}
             </div>
 
             {/* MODO DISCOVERY: GRID SIMPLE + SECCIONES PERSONALIZADAS */}
@@ -726,7 +718,19 @@ export const BannerManagerPage = () => {
                 
                 {/* 1. GRID DE CATEGORÍAS (ICONOS) */}
                 <div className="space-y-4">
-                  <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider">Iconos de Acceso Rápido</h3>
+                  <div className="flex justify-between items-center">
+                     <div>
+                        <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider">1. Iconos de Acceso Rápido</h3>
+                        <p className="text-xs text-slate-500">Círculos superiores con imagen (Ej: Supermercado, Farmacia)</p>
+                     </div>
+                     <button 
+                        onClick={() => setEditingCategory({})} 
+                        className="bg-white/5 hover:bg-white/10 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 border border-white/10"
+                      >
+                        <Plus size={14} /> Añadir Icono (Requiere Foto)
+                      </button>
+                  </div>
+                  
                   <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4">
                     {categories.map((cat) => (
                       <div key={cat.id} className="bg-slate-900 border border-white/10 rounded-xl p-4 flex flex-col items-center gap-3 group relative hover:border-brand-pink/50 transition-all">
@@ -752,16 +756,20 @@ export const BannerManagerPage = () => {
                 {/* 2. SECCIONES DEL FEED */}
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
-                    <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider">Secciones del Feed</h3>
+                    <div>
+                        <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider">2. Secciones del Feed</h3>
+                        <p className="text-xs text-slate-500">Listas horizontales de productos (Ej: "Tendencias", "Lo Nuevo")</p>
+                    </div>
                     <button 
                       onClick={() => setEditingSectionTitle('')}
-                      className="text-brand-pink text-xs font-bold hover:underline flex items-center gap-1"
+                      className="bg-brand-pink text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 shadow-lg shadow-brand-pink/20"
                     >
-                      <Plus size={14} /> Nueva Sección
+                      <Plus size={14} /> Nueva Sección (Solo Título)
                     </button>
                   </div>
                   
                   <div className="space-y-6">
+
                     {customSections.map((section) => (
                       <div key={section.id} className="bg-slate-900/50 border border-white/10 rounded-2xl p-6 relative group">
                         <div className="flex justify-between items-center mb-4">
