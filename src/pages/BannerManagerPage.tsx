@@ -193,9 +193,9 @@ export const BannerManagerPage = () => {
       
       setSlides([...slides, newSlide]);
       setCropImage(null);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert('Error al subir imagen');
+      alert(`Error al subir imagen: ${e.message || 'Error desconocido'}`);
     }
     setUploading(false);
   };
