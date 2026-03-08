@@ -181,3 +181,48 @@ export interface ZoneCampaignConfig {
   price_per_day: number;
   active_campaigns: number;
 }
+
+export interface DiscoveryConfig {
+  id: string;
+  zone_id: number;
+  section_key: string;
+  config_json: any;
+  updated_at: string;
+}
+
+export const getDiscoveryConfig = async (zoneId: number, sectionKey: string): Promise<any> => {
+  try {
+    const { data, error } = await supabase
+      .from('discovery_config')
+      .select('config_json')
+      .eq('zone_id', zoneId)
+      .eq('section_key', sectionKey)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') return null; // No rows found
+      console.warn(`Error fetching config for ${sectionKey}:`, error.message);
+      return null;
+    }
+    return data?.config_json || null;
+  } catch (e) {
+    console.error(`Exception fetching config for ${sectionKey}:`, e);
+    return null;
+  }
+};
+
+export const saveDiscoveryConfig = async (zoneId: number, sectionKey: string, config: any) => {
+  try {
+    const { error } = await supabase
+      .from('discovery_config')
+      .upsert(
+        { zone_id: zoneId, section_key: sectionKey, config_json: config, updated_at: new Date() },
+        { onConflict: 'zone_id, section_key' }
+      );
+    
+    if (error) throw error;
+  } catch (e) {
+    console.error(`Exception saving config for ${sectionKey}:`, e);
+    throw e;
+  }
+};
