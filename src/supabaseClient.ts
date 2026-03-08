@@ -26,12 +26,13 @@ export interface BannerSlide {
 export interface Banner {
   id: string;
   zone_id: number;
-  title: string; // Nombre interno para referencia
-  subtitle?: string; // Deprecado
-  image_url: string; // Deprecado: se mantiene por compatibilidad, pero ahora usamos 'slides'
-  action_type: 'open_restaurant' | 'open_category' | 'none'; // Deprecado
-  action_target?: string; // Deprecado
-  slides?: BannerSlide[]; // Nuevo campo para múltiples slides
+  screen_id?: string; // Nuevo campo para filtrar por pantalla (discovery, supermarkets, etc)
+  title: string; 
+  subtitle?: string; 
+  image_url: string; 
+  action_type: 'open_restaurant' | 'open_category' | 'none'; 
+  action_target?: string; 
+  slides?: BannerSlide[]; 
   is_active: boolean;
   priority: number;
   created_at?: string;
@@ -68,16 +69,34 @@ export const getZones = async (): Promise<Zone[]> => {
   }
 };
 
-export const getBanners = async (zoneId: number): Promise<Banner[]> => {
+export const getBanners = async (zoneId: number, screenId: string = 'discovery'): Promise<Banner[]> => {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from('banners')
       .select('*')
       .eq('zone_id', zoneId)
       .order('priority', { ascending: true });
 
+    // Intentamos filtrar por screen_id si la columna existe.
+    // Como no podemos saber si existe sin fallar, lo intentamos.
+    // Si falla, es probable que la columna no exista, así que retornamos lo que hay (fallback legacy)
+    // O mejor: asumimos que el usuario ya corrió el script SQL.
+    query = query.eq('screen_id', screenId);
+
+    const { data, error } = await query;
+
     if (error) {
-      console.warn('Error fetching banners (tabla banners podría no existir):', error.message);
+      // Si el error es sobre la columna 'screen_id', hacemos fallback a solo zone_id
+      if (error.message.includes('column "screen_id" does not exist')) {
+        console.warn("Columna screen_id no existe. Fallback a legacy mode.");
+        const { data: legacyData } = await supabase
+          .from('banners')
+          .select('*')
+          .eq('zone_id', zoneId)
+          .order('priority', { ascending: true });
+        return legacyData || [];
+      }
+      console.warn('Error fetching banners:', error.message);
       return [];
     }
     return data || [];
@@ -88,9 +107,15 @@ export const getBanners = async (zoneId: number): Promise<Banner[]> => {
 };
 
 export const createBanner = async (banner: Omit<Banner, 'id' | 'created_at'>) => {
+  // Aseguramos que tenga screen_id
+  const bannerToSave = {
+    ...banner,
+    screen_id: banner.screen_id || 'discovery'
+  };
+
   const { data, error } = await supabase
     .from('banners')
-    .insert([banner])
+    .insert([bannerToSave])
     .select();
   
   if (error) throw error;

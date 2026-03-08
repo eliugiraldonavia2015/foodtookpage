@@ -41,6 +41,15 @@ export const BannerManagerPage = () => {
   const [selectedZoneId, setSelectedZoneId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Selector de Pantalla
+  const [selectedScreen, setSelectedScreen] = useState('discovery');
+  const SCREENS = [
+    { id: 'discovery', label: 'Discovery Food', icon: Zap },
+    { id: 'pharmacy', label: 'Farmacias', icon: Check },
+    { id: 'supermarkets', label: 'Supermercados', icon: Store },
+    { id: 'restaurants', label: 'Restaurantes', icon: Store },
+  ];
+
   // --- ESTADOS BANNERS ---
   const [banners, setBanners] = useState<Banner[]>([]);
   const [editingBanner, setEditingBanner] = useState<Partial<Banner> | null>(null);
@@ -104,18 +113,18 @@ export const BannerManagerPage = () => {
     init();
   }, []);
 
-  // Cambio de Zona
+  // Cambio de Zona o Pantalla
   useEffect(() => {
     if (selectedZoneId) {
-      if (activeTab === 'banners') fetchBanners(selectedZoneId);
-      if (activeTab === 'restaurants') fetchRestaurantConfig(selectedZoneId);
-      if (activeTab === 'categories') fetchCategoryConfig(selectedZoneId);
+      if (activeTab === 'banners') fetchBanners(selectedZoneId, selectedScreen);
+      if (activeTab === 'restaurants') fetchRestaurantConfig(selectedZoneId, selectedScreen);
+      if (activeTab === 'categories') fetchCategoryConfig(selectedZoneId, selectedScreen);
     }
-  }, [selectedZoneId, activeTab]);
+  }, [selectedZoneId, activeTab, selectedScreen]);
 
   // --- LOGICA BANNERS ---
-  const fetchBanners = async (zoneId: number) => {
-    const data = await getBanners(zoneId);
+  const fetchBanners = async (zoneId: number, screenId: string) => {
+    const data = await getBanners(zoneId, screenId);
     setBanners(data);
   };
 
@@ -180,6 +189,7 @@ export const BannerManagerPage = () => {
     try {
       const bannerData = {
         zone_id: selectedZoneId,
+        screen_id: selectedScreen, // Incluir screen_id
         title: editingBanner?.title || 'Campaña Sin Nombre',
         subtitle: '',
         image_url: slides[0].image_url,
@@ -195,7 +205,7 @@ export const BannerManagerPage = () => {
       } else {
         await createBanner(bannerData as any);
       }
-      await fetchBanners(selectedZoneId);
+      await fetchBanners(selectedZoneId, selectedScreen);
       setEditingBanner(null);
     } catch (error) {
       console.error("Error saving banner:", error);
@@ -206,7 +216,7 @@ export const BannerManagerPage = () => {
   const handleDeleteBanner = async (id: string) => {
     if (confirm("¿Eliminar campaña?")) {
       await deleteBanner(id);
-      if (selectedZoneId) fetchBanners(selectedZoneId);
+      if (selectedZoneId) fetchBanners(selectedZoneId, selectedScreen);
     }
   };
 
@@ -220,9 +230,9 @@ export const BannerManagerPage = () => {
 
 
   // --- LOGICA RESTAURANTES ---
-  const fetchRestaurantConfig = async (zoneId: number) => {
+  const fetchRestaurantConfig = async (zoneId: number, screenId: string) => {
     setRestConfigLoading(true);
-    const config = await getDiscoveryConfig(zoneId, 'restaurants_featured');
+    const config = await getDiscoveryConfig(zoneId, `${screenId}_restaurants_featured`);
     if (config) {
       // Reconstruct objects from IDs
       const orderedIds = config.ordered_ids || [];
@@ -244,7 +254,7 @@ export const BannerManagerPage = () => {
   const handleSaveRestConfig = async () => {
     if (!selectedZoneId) return;
     try {
-      await saveDiscoveryConfig(selectedZoneId, 'restaurants_featured', {
+      await saveDiscoveryConfig(selectedZoneId, `${selectedScreen}_restaurants_featured`, {
         ordered_ids: featuredRestaurants.map(r => r.id),
         strategy: restConfigSettings.strategy,
         limit: restConfigSettings.limit
@@ -266,23 +276,85 @@ export const BannerManagerPage = () => {
   };
 
 
-  // --- LOGICA CATEGORÍAS ---
-  const fetchCategoryConfig = async (zoneId: number) => {
+  // --- ESTADOS SECCIONES (Supermercados/Farmacias) ---
+  const [sections, setSections] = useState<any[]>([]);
+  const [editingSection, setEditingSection] = useState<any | null>(null);
+
+  // --- LOGICA CATEGORÍAS/SECCIONES ---
+  const fetchCategoryConfig = async (zoneId: number, screenId: string) => {
     setCatConfigLoading(true);
-    const config = await getDiscoveryConfig(zoneId, 'categories_grid');
-    if (config && config.items) {
-      setCategories(config.items);
+    
+    if (screenId === 'discovery') {
+      // Modo Simple: Solo categorías para Discovery
+      const config = await getDiscoveryConfig(zoneId, `${screenId}_categories_grid`);
+      if (config && config.items) {
+        setCategories(config.items);
+      } else {
+        setCategories([]);
+      }
     } else {
-      setCategories([]);
+      // Modo Avanzado: Secciones Dinámicas para Supermercados/Farmacias
+      const config = await getDiscoveryConfig(zoneId, `${screenId}_layout`);
+      if (config && config.sections) {
+        setSections(config.sections);
+      } else {
+        // Default sections if empty
+        setSections([
+          { id: 'cat_grid', type: 'category_grid', title: 'Categorías', items: [] },
+          { id: 'feat_prods', type: 'product_row', title: 'Productos Destacados', items: [] }
+        ]);
+      }
     }
+    
     setCatConfigLoading(false);
   };
+
+  const handleSaveSections = async (newSections: any[]) => {
+    if (!selectedZoneId) return;
+    try {
+      await saveDiscoveryConfig(selectedZoneId, `${selectedScreen}_layout`, {
+        sections: newSections
+      });
+      alert('Diseño de pantalla guardado');
+    } catch (e) {
+      alert('Error guardando secciones');
+    }
+  };
+
+  const handleUpdateSectionItems = (sectionId: string, newItems: any[]) => {
+    const newSections = sections.map(s => s.id === sectionId ? { ...s, items: newItems } : s);
+    setSections(newSections);
+    handleSaveSections(newSections);
+  };
+
+  const handleAddSectionItem = (sectionId: string, item: any) => {
+    const section = sections.find(s => s.id === sectionId);
+    if (!section) return;
+    
+    const newItem = {
+      id: item.id || crypto.randomUUID(),
+      name: item.name,
+      image_url: item.image_url || 'https://via.placeholder.com/150',
+      ...item
+    };
+    
+    const newItems = [...(section.items || []), newItem];
+    handleUpdateSectionItems(sectionId, newItems);
+  };
+
+  const handleDeleteSectionItem = (sectionId: string, itemId: string) => {
+    const section = sections.find(s => s.id === sectionId);
+    if (!section) return;
+    const newItems = section.items.filter((i: any) => i.id !== itemId);
+    handleUpdateSectionItems(sectionId, newItems);
+  };
+
 
   const handleSaveCatConfig = async (newCats?: CategoryItem[]) => {
     if (!selectedZoneId) return;
     const catsToSave = newCats || categories;
     try {
-      await saveDiscoveryConfig(selectedZoneId, 'categories_grid', {
+      await saveDiscoveryConfig(selectedZoneId, `${selectedScreen}_categories_grid`, {
         items: catsToSave
       });
       if (!newCats) alert('Categorías guardadas');
@@ -293,6 +365,14 @@ export const BannerManagerPage = () => {
 
   const handleAddCategory = () => {
     if (editingCategory && editingCategory.name) {
+      // Si estamos en modo secciones (no discovery), añadimos al editingSection actual
+      if (selectedScreen !== 'discovery' && editingSection) {
+        handleAddSectionItem(editingSection.id, editingCategory);
+        setEditingCategory(null);
+        setEditingSection(null);
+        return;
+      }
+
       const newCat = {
         id: editingCategory.id || crypto.randomUUID(),
         name: editingCategory.name,
@@ -344,6 +424,27 @@ export const BannerManagerPage = () => {
         </div>
 
         <div className="flex items-center gap-4 w-full md:w-auto">
+          {/* Selector de Pantalla */}
+          <div className="flex bg-slate-900 border border-white/10 rounded-xl p-1">
+            {SCREENS.map(screen => {
+              const Icon = screen.icon;
+              return (
+                <button
+                  key={screen.id}
+                  onClick={() => setSelectedScreen(screen.id)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 transition-all ${
+                    selectedScreen === screen.id 
+                      ? 'bg-brand-pink text-white shadow-md' 
+                      : 'text-slate-400 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  <Icon size={14} />
+                  {screen.label}
+                </button>
+              );
+            })}
+          </div>
+
           <select 
             value={selectedZoneId || ''}
             onChange={(e) => setSelectedZoneId(Number(e.target.value))}
@@ -365,19 +466,24 @@ export const BannerManagerPage = () => {
           <Smartphone size={18} />
           Banners & Cards
         </button>
-        <button 
-          onClick={() => setActiveTab('restaurants')}
-          className={`px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 transition-all ${activeTab === 'restaurants' ? 'bg-brand-pink text-white shadow-lg shadow-brand-pink/20' : 'bg-white/5 text-slate-400 hover:bg-white/10'}`}
-        >
-          <Store size={18} />
-          Orden de Restaurantes
-        </button>
+        
+        {/* Restaurantes solo en Discovery */}
+        {(selectedScreen === 'discovery' || selectedScreen === 'restaurants') && (
+          <button 
+            onClick={() => setActiveTab('restaurants')}
+            className={`px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 transition-all ${activeTab === 'restaurants' ? 'bg-brand-pink text-white shadow-lg shadow-brand-pink/20' : 'bg-white/5 text-slate-400 hover:bg-white/10'}`}
+          >
+            <Store size={18} />
+            Orden de Restaurantes
+          </button>
+        )}
+
         <button 
           onClick={() => setActiveTab('categories')}
           className={`px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 transition-all ${activeTab === 'categories' ? 'bg-brand-pink text-white shadow-lg shadow-brand-pink/20' : 'bg-white/5 text-slate-400 hover:bg-white/10'}`}
         >
           <List size={18} />
-          Categorías
+          {selectedScreen === 'discovery' ? 'Categorías' : 'Secciones & Categorías'}
         </button>
       </div>
 
@@ -547,43 +653,125 @@ export const BannerManagerPage = () => {
           </div>
         )}
 
-        {/* --- TAB CATEGORIES --- */}
+        {/* --- TAB CATEGORIES / SECTIONS --- */}
         {activeTab === 'categories' && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <div>
-                <h2 className="text-lg font-bold text-white">Categorías Visibles</h2>
-                <p className="text-sm text-slate-400">Configura qué categorías aparecen en la barra de navegación rápida</p>
+                <h2 className="text-lg font-bold text-white">
+                  {selectedScreen === 'discovery' ? 'Categorías Visibles' : 'Diseño de Pantalla'}
+                </h2>
+                <p className="text-sm text-slate-400">Configura las secciones y categorías</p>
               </div>
-              <button 
-                onClick={() => setEditingCategory({})} 
-                className="bg-brand-pink text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2"
-              >
-                <Plus size={16} /> Añadir Categoría
-              </button>
-            </div>
-
-            {/* Grid de Categorías */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4">
-              {categories.map((cat) => (
-                <div key={cat.id} className="bg-slate-900 border border-white/10 rounded-xl p-4 flex flex-col items-center gap-3 group relative hover:border-brand-pink/50 transition-all">
-                  <div className="w-16 h-16 rounded-full bg-slate-800 overflow-hidden border-2 border-white/5 group-hover:border-brand-pink transition-colors">
-                    <img src={cat.image_url} alt={cat.name} className="w-full h-full object-cover" />
-                  </div>
-                  <span className="text-sm font-bold text-center">{cat.name}</span>
-                  
-                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                    <button onClick={() => setEditingCategory(cat)} className="p-1 bg-white/10 rounded hover:bg-white/20"><Edit2 size={12} /></button>
-                    <button onClick={() => handleDeleteCategory(cat.id)} className="p-1 bg-rose-500/20 text-rose-400 rounded hover:bg-rose-500/30"><Trash2 size={12} /></button>
-                  </div>
-                </div>
-              ))}
-              {categories.length === 0 && (
-                <div className="col-span-full py-12 text-center text-slate-500 border border-dashed border-white/10 rounded-xl">
-                  No hay categorías configuradas para esta zona
-                </div>
+              {selectedScreen === 'discovery' && (
+                <button 
+                  onClick={() => setEditingCategory({})} 
+                  className="bg-brand-pink text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2"
+                >
+                  <Plus size={16} /> Añadir Categoría
+                </button>
               )}
             </div>
+
+            {/* MODO DISCOVERY: GRID SIMPLE */}
+            {selectedScreen === 'discovery' && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4">
+                {categories.map((cat) => (
+                  <div key={cat.id} className="bg-slate-900 border border-white/10 rounded-xl p-4 flex flex-col items-center gap-3 group relative hover:border-brand-pink/50 transition-all">
+                    <div className="w-16 h-16 rounded-full bg-slate-800 overflow-hidden border-2 border-white/5 group-hover:border-brand-pink transition-colors">
+                      <img src={cat.image_url} alt={cat.name} className="w-full h-full object-cover" />
+                    </div>
+                    <span className="text-sm font-bold text-center">{cat.name}</span>
+                    
+                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                      <button onClick={() => setEditingCategory(cat)} className="p-1 bg-white/10 rounded hover:bg-white/20"><Edit2 size={12} /></button>
+                      <button onClick={() => handleDeleteCategory(cat.id)} className="p-1 bg-rose-500/20 text-rose-400 rounded hover:bg-rose-500/30"><Trash2 size={12} /></button>
+                    </div>
+                  </div>
+                ))}
+                {categories.length === 0 && (
+                  <div className="col-span-full py-12 text-center text-slate-500 border border-dashed border-white/10 rounded-xl">
+                    No hay categorías configuradas para esta zona
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* MODO AVANZADO: SECCIONES (Super, Farmacia) */}
+            {selectedScreen !== 'discovery' && (
+              <div className="space-y-8">
+                {sections.map((section) => (
+                  <div key={section.id} className="bg-slate-900/50 border border-white/10 rounded-2xl p-6">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                        {section.type === 'category_grid' ? <List size={20} className="text-blue-400" /> : <Store size={20} className="text-amber-400" />}
+                        {section.title}
+                      </h3>
+                      <button 
+                        onClick={() => {
+                          setEditingSection(section);
+                          setEditingCategory({}); // Reusamos el modal de categoría para ítems
+                        }}
+                        className="text-sm text-brand-pink font-bold hover:underline flex items-center gap-1"
+                      >
+                        <Plus size={14} /> Añadir Ítem
+                      </button>
+                    </div>
+
+                    {/* Renderizado según tipo de sección */}
+                    {section.type === 'category_grid' ? (
+                      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4">
+                        {section.items?.map((item: any) => (
+                          <div key={item.id} className="bg-slate-800 border border-white/5 rounded-xl p-3 flex flex-col items-center gap-2 group relative">
+                            <div className="w-14 h-14 rounded-xl bg-slate-700 overflow-hidden">
+                              <img src={item.image_url} className="w-full h-full object-cover" />
+                            </div>
+                            <span className="text-xs font-bold text-center leading-tight">{item.name}</span>
+                            <button 
+                              onClick={() => handleDeleteSectionItem(section.id, item.id)}
+                              className="absolute -top-1 -right-1 p-1 bg-rose-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                            >
+                              <X size={10} />
+                            </button>
+                          </div>
+                        ))}
+                        {(!section.items || section.items.length === 0) && (
+                          <div className="col-span-full py-6 text-center text-slate-500 text-xs border border-dashed border-white/5 rounded-xl">
+                            Sección vacía
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      // Product Row / List
+                      <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-thin">
+                        {section.items?.map((item: any) => (
+                          <div key={item.id} className="w-32 shrink-0 bg-slate-800 border border-white/5 rounded-xl overflow-hidden group relative">
+                            <div className="h-24 bg-slate-700">
+                              <img src={item.image_url} className="w-full h-full object-cover" />
+                            </div>
+                            <div className="p-2">
+                              <p className="text-xs font-bold truncate">{item.name}</p>
+                              <p className="text-[10px] text-slate-400">Destacado</p>
+                            </div>
+                            <button 
+                              onClick={() => handleDeleteSectionItem(section.id, item.id)}
+                              className="absolute top-1 right-1 p-1 bg-rose-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                            >
+                              <X size={10} />
+                            </button>
+                          </div>
+                        ))}
+                        {(!section.items || section.items.length === 0) && (
+                          <div className="w-full py-6 text-center text-slate-500 text-xs border border-dashed border-white/5 rounded-xl">
+                            Sin productos destacados
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
