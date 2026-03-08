@@ -72,8 +72,10 @@ export const BannerManagerPage = () => {
 
   // --- ESTADOS CATEGORÍAS ---
   const [categories, setCategories] = useState<CategoryItem[]>([]);
+  const [customSections, setCustomSections] = useState<any[]>([]); // Nuevas secciones dinámicas para Discovery
   const [catConfigLoading, setCatConfigLoading] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Partial<CategoryItem> | null>(null);
+  const [editingSectionTitle, setEditingSectionTitle] = useState<string | null>(null); // Para crear nueva sección
 
   // Inicialización
   useEffect(() => {
@@ -292,6 +294,14 @@ export const BannerManagerPage = () => {
       } else {
         setCategories([]);
       }
+
+      // Cargar secciones dinámicas de Discovery
+      const customConfig = await getDiscoveryConfig(zoneId, `${screenId}_custom_sections`);
+      if (customConfig && customConfig.sections) {
+        setCustomSections(customConfig.sections);
+      } else {
+        setCustomSections([]);
+      }
     } else {
       // Modo Avanzado: Secciones Dinámicas para Supermercados/Farmacias
       const config = await getDiscoveryConfig(zoneId, `${screenId}_layout`);
@@ -360,6 +370,43 @@ export const BannerManagerPage = () => {
       if (!newCats) alert('Categorías guardadas');
     } catch (e) {
       alert('Error guardando categorías');
+    }
+  };
+
+  // --- LOGICA SECCIONES PERSONALIZADAS DISCOVERY ---
+  const handleSaveCustomSections = async (newSections: any[]) => {
+    if (!selectedZoneId) return;
+    try {
+      await saveDiscoveryConfig(selectedZoneId, `${selectedScreen}_custom_sections`, {
+        sections: newSections
+      });
+      // No alertar cada vez, solo en error o acción manual
+    } catch (e) {
+      alert('Error guardando secciones del feed');
+    }
+  };
+
+  const handleAddCustomSection = () => {
+    if (!editingSectionTitle) return;
+    
+    const newSection = {
+      id: crypto.randomUUID(),
+      title: editingSectionTitle,
+      type: 'product_carousel', // Por defecto carrusel de productos
+      items: []
+    };
+    
+    const newSections = [...customSections, newSection];
+    setCustomSections(newSections);
+    handleSaveCustomSections(newSections);
+    setEditingSectionTitle(null);
+  };
+
+  const handleDeleteCustomSection = (id: string) => {
+    if (confirm("¿Eliminar esta sección del feed?")) {
+      const newSections = customSections.filter(s => s.id !== id);
+      setCustomSections(newSections);
+      handleSaveCustomSections(newSections);
     }
   };
 
@@ -673,27 +720,107 @@ export const BannerManagerPage = () => {
               )}
             </div>
 
-            {/* MODO DISCOVERY: GRID SIMPLE */}
+            {/* MODO DISCOVERY: GRID SIMPLE + SECCIONES PERSONALIZADAS */}
             {selectedScreen === 'discovery' && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4">
-                {categories.map((cat) => (
-                  <div key={cat.id} className="bg-slate-900 border border-white/10 rounded-xl p-4 flex flex-col items-center gap-3 group relative hover:border-brand-pink/50 transition-all">
-                    <div className="w-16 h-16 rounded-full bg-slate-800 overflow-hidden border-2 border-white/5 group-hover:border-brand-pink transition-colors">
-                      <img src={cat.image_url} alt={cat.name} className="w-full h-full object-cover" />
-                    </div>
-                    <span className="text-sm font-bold text-center">{cat.name}</span>
-                    
-                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                      <button onClick={() => setEditingCategory(cat)} className="p-1 bg-white/10 rounded hover:bg-white/20"><Edit2 size={12} /></button>
-                      <button onClick={() => handleDeleteCategory(cat.id)} className="p-1 bg-rose-500/20 text-rose-400 rounded hover:bg-rose-500/30"><Trash2 size={12} /></button>
-                    </div>
+              <div className="space-y-10">
+                
+                {/* 1. GRID DE CATEGORÍAS (ICONOS) */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider">Iconos de Acceso Rápido</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4">
+                    {categories.map((cat) => (
+                      <div key={cat.id} className="bg-slate-900 border border-white/10 rounded-xl p-4 flex flex-col items-center gap-3 group relative hover:border-brand-pink/50 transition-all">
+                        <div className="w-16 h-16 rounded-full bg-slate-800 overflow-hidden border-2 border-white/5 group-hover:border-brand-pink transition-colors">
+                          <img src={cat.image_url} alt={cat.name} className="w-full h-full object-cover" />
+                        </div>
+                        <span className="text-sm font-bold text-center">{cat.name}</span>
+                        
+                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                          <button onClick={() => setEditingCategory(cat)} className="p-1 bg-white/10 rounded hover:bg-white/20"><Edit2 size={12} /></button>
+                          <button onClick={() => handleDeleteCategory(cat.id)} className="p-1 bg-rose-500/20 text-rose-400 rounded hover:bg-rose-500/30"><Trash2 size={12} /></button>
+                        </div>
+                      </div>
+                    ))}
+                    {categories.length === 0 && (
+                      <div className="col-span-full py-8 text-center text-slate-500 border border-dashed border-white/10 rounded-xl text-sm">
+                        No hay iconos configurados
+                      </div>
+                    )}
                   </div>
-                ))}
-                {categories.length === 0 && (
-                  <div className="col-span-full py-12 text-center text-slate-500 border border-dashed border-white/10 rounded-xl">
-                    No hay categorías configuradas para esta zona
+                </div>
+
+                {/* 2. SECCIONES DEL FEED */}
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider">Secciones del Feed</h3>
+                    <button 
+                      onClick={() => setEditingSectionTitle('')}
+                      className="text-brand-pink text-xs font-bold hover:underline flex items-center gap-1"
+                    >
+                      <Plus size={14} /> Nueva Sección
+                    </button>
                   </div>
-                )}
+                  
+                  <div className="space-y-6">
+                    {customSections.map((section) => (
+                      <div key={section.id} className="bg-slate-900/50 border border-white/10 rounded-2xl p-6 relative group">
+                        <div className="flex justify-between items-center mb-4">
+                          <h3 className="text-lg font-bold text-white">{section.title}</h3>
+                          <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button className="text-xs bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg">Editar Items (Próximamente)</button>
+                            <button onClick={() => handleDeleteCustomSection(section.id)} className="text-rose-400 hover:bg-rose-500/10 p-2 rounded-lg"><Trash2 size={16} /></button>
+                          </div>
+                        </div>
+
+                        {/* Placeholder para Sección Vacía */}
+                        {(!section.items || section.items.length === 0) ? (
+                          <div className="border-2 border-dashed border-white/10 rounded-xl p-8 flex flex-col items-center justify-center text-center bg-slate-950/30">
+                            <Layers className="text-slate-600 mb-2" size={32} />
+                            <p className="text-slate-400 font-bold mb-1">{section.title}</p>
+                            <p className="text-xs text-slate-500">Esta sección está vacía. Añade productos para que sea visible.</p>
+                          </div>
+                        ) : (
+                          <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-thin">
+                             {/* Aquí irían los items si los hubiera */}
+                             <div className="text-slate-500 text-sm">Items configurados ({section.items.length})</div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
+                    {customSections.length === 0 && (
+                      <div className="py-12 text-center text-slate-500 border border-dashed border-white/10 rounded-xl">
+                        No hay secciones personalizadas. Se mostrarán solo las predeterminadas (Recomendados, etc).
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Formulario Inline para Nueva Sección */}
+                  {editingSectionTitle !== null && (
+                    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                      <div className="bg-slate-900 border border-white/10 rounded-2xl w-full max-w-sm p-6 shadow-2xl">
+                        <h3 className="text-lg font-bold text-white mb-4">Nueva Sección del Feed</h3>
+                        <div className="space-y-4">
+                          <div>
+                            <label className="text-xs text-slate-400 mb-1 block">Título de la Sección</label>
+                            <input 
+                              type="text" 
+                              value={editingSectionTitle} 
+                              onChange={e => setEditingSectionTitle(e.target.value)} 
+                              className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 outline-none focus:border-brand-pink" 
+                              placeholder="Ej: Platillos en Tendencia"
+                              autoFocus
+                            />
+                          </div>
+                          <div className="flex gap-2 mt-4">
+                            <button onClick={() => setEditingSectionTitle(null)} className="flex-1 py-2 bg-white/5 rounded-xl font-bold text-sm">Cancelar</button>
+                            <button onClick={handleAddCustomSection} disabled={!editingSectionTitle.trim()} className="flex-1 py-2 bg-brand-pink rounded-xl font-bold text-sm disabled:opacity-50">Crear</button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
