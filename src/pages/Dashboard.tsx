@@ -1015,7 +1015,7 @@ const GeoSection = () => {
 };
 
 // --- Componente para gestión de campañas por zona (Integrado con Supabase) ---
-import { getZones, Zone } from '../supabaseClient';
+import { getZones, inspectSchema, Zone } from '../supabaseClient';
 
 const ZoneDiscoveryManager = () => {
   const [zones, setZones] = useState<Zone[]>([]);
@@ -1025,6 +1025,8 @@ const ZoneDiscoveryManager = () => {
   useEffect(() => {
     const fetchZones = async () => {
       setLoading(true);
+      // Ejecutamos la inspección de esquema solo en consola para que el desarrollador vea qué tablas existen
+      await inspectSchema(); 
       const data = await getZones();
       setZones(data);
       setLoading(false);

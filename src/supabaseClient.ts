@@ -18,33 +18,44 @@ export interface Zone {
 
 export const getZones = async (): Promise<Zone[]> => {
   try {
-    // Intentamos obtener las zonas de la tabla 'zones'
     const { data, error } = await supabase
       .from('zones')
       .select('*');
       
     if (error) {
-      console.warn('Supabase error fetching zones (using mocks):', error.message);
-      return MOCK_ZONES;
+      console.error('Supabase error fetching zones:', error.message);
+      return []; // Return empty array instead of mocks on error
     }
 
-    // Si la tabla existe pero está vacía, o si la data es null, usamos mocks para demo
-    if (!data || data.length === 0) {
-      console.log('No zones found in DB, using mocks');
-      return MOCK_ZONES;
-    }
-    
-    // Si hay datos reales, los mapeamos para asegurar que tengan campos de UI
-    // (active_users y current_ads podrían no venir de la DB)
-    return data.map(zone => ({
-      ...zone,
-      active_users: zone.active_users || Math.floor(Math.random() * 1500) + 200, // Fallback random si no viene de DB
-      current_ads: zone.current_ads || Math.floor(Math.random() * 10) // Fallback random si no viene de DB
-    }));
-
+    return data || [];
   } catch (e) {
     console.error('Exception fetching zones:', e);
-    return MOCK_ZONES;
+    return []; // Return empty array on exception
+  }
+};
+
+// Función de utilidad para inspeccionar tablas (Solo desarrollo)
+export const inspectSchema = async () => {
+  console.log("--- Inspeccionando Tablas Públicas ---");
+  // Intentamos listar tablas accediendo a information_schema si los permisos lo permiten,
+  // o probando tablas comunes.
+  // Nota: Acceder a information_schema desde el cliente JS a veces está bloqueado por RLS.
+  // Una estrategia alternativa es intentar un select simple a tablas conocidas o usar una función RPC si existe.
+  
+  try {
+      // Intento 1: RPC si existiera una función de introspección (poco probable por defecto)
+      // Intento 2: Probar tablas comunes para ver cuáles responden
+      const commonTables = ['zones', 'users', 'restaurants', 'campaigns', 'ads'];
+      const results = {};
+      
+      for (const table of commonTables) {
+          const { count, error } = await supabase.from(table).select('*', { count: 'exact', head: true });
+          results[table] = error ? `Error: ${error.message}` : `OK (Rows: ${count})`;
+      }
+      console.table(results);
+      return results;
+  } catch (e) {
+      console.error("Error inspecting schema:", e);
   }
 };
 
