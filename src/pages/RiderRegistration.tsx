@@ -392,10 +392,28 @@ export function RiderRegistration({ onBack, initialData }: RiderRegistrationProp
   
   const [isDraftSaved, setIsDraftSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [step, isSuccess, isDraftSaved]);
+
+  if (isSubmitting) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-8 text-center relative z-[70]">
+        <div className="relative mb-8">
+          <div className="w-24 h-24 border-4 border-slate-100 rounded-full"></div>
+          <div className="w-24 h-24 border-4 border-green-500 border-t-transparent rounded-full animate-spin absolute inset-0"></div>
+          <Bike className="absolute inset-0 m-auto text-green-500 animate-pulse" size={32} />
+        </div>
+        <h2 className="text-2xl font-bold text-slate-900 mb-2">Procesando tu registro...</h2>
+        <p className="text-slate-500 max-w-md mx-auto mb-8">
+          Estamos guardando tu información y subiendo tus documentos de forma segura. <br/>
+          <span className="font-bold text-slate-700">Por favor, no cierres esta ventana.</span>
+        </p>
+      </div>
+    );
+  }
 
   if (showWelcomeBack && initialData) {
     return (
@@ -585,6 +603,9 @@ export function RiderRegistration({ onBack, initialData }: RiderRegistrationProp
 
       // 3. Save to Firestore "rider_requests" collection
       console.log("Guardando datos en Firestore...");
+      
+      setIsSubmitting(true); // START LOADING
+
       await setDoc(riderRef, {
         id: requestId,
         uid: user.uid,
@@ -621,8 +642,14 @@ export function RiderRegistration({ onBack, initialData }: RiderRegistrationProp
       });
       console.log("Datos guardados correctamente.");
 
-      setIsSuccess(true);
+      // Delay pequeño para asegurar que la UX de carga se vea profesional y no un parpadeo
+      setTimeout(() => {
+          setIsSubmitting(false); // STOP LOADING
+          setIsSuccess(true);
+      }, 1500);
+      
     } catch (error: any) {
+      setIsSubmitting(false); // STOP LOADING ON ERROR
       console.error("Error registering rider (DETALLADO):", error);
       let errorMsg = "Ocurrió un error al registrarse. Por favor intenta nuevamente.";
       

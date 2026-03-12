@@ -174,6 +174,16 @@ function App() {
                    } as User);
                 } else {
                    console.warn("Usuario autenticado pero NO encontrado en ninguna colección. Cerrando sesión...");
+                   
+                   // EXCEPCIÓN CRÍTICA: Si estamos en rutas de registro, NO forzar logout.
+                   // El usuario acaba de crearse en Auth y está a punto de escribir en Firestore.
+                   if (location.pathname.includes('/registration')) {
+                       console.log("Detectado flujo de registro. Manteniendo sesión temporal...");
+                       // Permitir que el componente de registro continúe
+                       setIsLoading(false);
+                       return;
+                   }
+
                    // FORCE LOGOUT: Usuario no existe en DB, eliminar sesión residual.
                    await signOut(auth);
                    setUser(null);

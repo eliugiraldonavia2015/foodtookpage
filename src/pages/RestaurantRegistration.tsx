@@ -447,6 +447,23 @@ export function RestaurantRegistration({ onBack, initialData }: RestaurantRegist
     window.scrollTo(0, 0);
   }, [step, isSuccess, isDraftSaved]);
 
+  if (isSubmitting) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-8 text-center relative z-[70]">
+        <div className="relative mb-8">
+          <div className="w-24 h-24 border-4 border-slate-100 rounded-full"></div>
+          <div className="w-24 h-24 border-4 border-orange-500 border-t-transparent rounded-full animate-spin absolute inset-0"></div>
+          <ChefHat className="absolute inset-0 m-auto text-orange-500 animate-pulse" size={32} />
+        </div>
+        <h2 className="text-2xl font-bold text-slate-900 mb-2">Procesando tu solicitud...</h2>
+        <p className="text-slate-500 max-w-md mx-auto mb-8">
+          Estamos creando tu perfil y subiendo tus documentos. <br/>
+          <span className="font-bold text-slate-700">Por favor, no cierres esta ventana.</span>
+        </p>
+      </div>
+    );
+  }
+
   if (showWelcomeBack && initialData) {
     return (
       <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-orange-500 selection:text-white relative overflow-y-auto">
@@ -599,8 +616,14 @@ export function RestaurantRegistration({ onBack, initialData }: RestaurantRegist
       });
       console.log("Datos guardados correctamente.");
 
-      setIsSuccess(true);
+      // Delay pequeño para asegurar que la UX de carga se vea profesional
+      setTimeout(() => {
+          setIsSubmitting(false); // STOP LOADING
+          setIsSuccess(true);
+      }, 1500);
+
     } catch (error: any) {
+      setIsSubmitting(false); // STOP LOADING ON ERROR
       console.error("Error DETALLADO al enviar solicitud:", error);
       let errorMessage = "Hubo un error al enviar tu solicitud. Por favor intenta nuevamente.";
       
