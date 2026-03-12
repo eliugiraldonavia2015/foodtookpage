@@ -555,6 +555,7 @@ export function RiderRegistration({ onBack, initialData }: RiderRegistrationProp
       }
 
       if (!user) throw new Error("No se pudo autenticar al usuario.");
+      console.log("Usuario autenticado:", user.uid);
 
       // 1. Create reference for ID using User UID
       const requestId = user.uid;
@@ -563,16 +564,27 @@ export function RiderRegistration({ onBack, initialData }: RiderRegistrationProp
       // 2. Upload files to Storage
       const fileUrls: Record<string, string> = {};
       
+      console.log("Iniciando subida de archivos...");
       for (const [key, file] of Object.entries(formData.files)) {
         if (file) {
+          console.log(`Subiendo ${key}...`);
+          // Use a simplified path to avoid permission issues if folders don't exist
+          // But based on rules: match /rider-documents/{requestId}/{allPaths=**}
           const fileRef = ref(storage, `rider-documents/${requestId}/${key}_${file.name}`);
-          await uploadBytes(fileRef, file);
-          const downloadURL = await getDownloadURL(fileRef);
-          fileUrls[`${key}Url`] = downloadURL;
+          try {
+            await uploadBytes(fileRef, file);
+            const downloadURL = await getDownloadURL(fileRef);
+            fileUrls[`${key}Url`] = downloadURL;
+            console.log(`${key} subido exitosamente.`);
+          } catch (uploadError: any) {
+            console.error(`Error subiendo ${key}:`, uploadError);
+            throw new Error(`Error al subir el documento ${key}. Verifica tu conexión o intenta con un archivo más pequeño.`);
+          }
         }
       }
 
       // 3. Save to Firestore "rider_requests" collection
+      console.log("Guardando datos en Firestore...");
       await setDoc(riderRef, {
         id: requestId,
         uid: user.uid,
@@ -596,7 +608,7 @@ export function RiderRegistration({ onBack, initialData }: RiderRegistrationProp
         // Vehículo
         vehicle: {
           type: formData.vehicleType,
-          plate: formData.plate,
+          plate: formData.plate || '', // Ensure plate is string even if empty
         },
         
         // Archivos
@@ -607,18 +619,25 @@ export function RiderRegistration({ onBack, initialData }: RiderRegistrationProp
         platform: 'web',
         appVersion: '1.0.0'
       });
+      console.log("Datos guardados correctamente.");
 
       setIsSuccess(true);
     } catch (error: any) {
-      console.error("Error registering rider:", error);
-      let errorMsg = "Ocurrió un error al registrarse.";
+      console.error("Error registering rider (DETALLADO):", error);
+      let errorMsg = "Ocurrió un error al registrarse. Por favor intenta nuevamente.";
+      
       if (error.code === 'auth/email-already-in-use') {
-        errorMsg = "El correo electrónico ya está registrado.";
+        errorMsg = "El correo electrónico ya está registrado. Intenta iniciar sesión.";
       } else if (error.code === 'auth/weak-password') {
-        errorMsg = "La contraseña es muy débil.";
+        errorMsg = "La contraseña es muy débil. Debe tener al menos 6 caracteres.";
       } else if (error.code === 'permission-denied') {
-        errorMsg = "No tienes permisos para realizar esta operación.";
+        errorMsg = "Permiso denegado: No se pudieron guardar los datos. Verifica que todos los campos estén completos.";
+      } else if (error.code === 'storage/unauthorized') {
+        errorMsg = "No tienes permiso para subir archivos. Intenta recargar la página.";
+      } else if (error.message) {
+        errorMsg = error.message;
       }
+      
       alert(errorMsg); 
     }
   };
