@@ -46,19 +46,6 @@ function App() {
 
   // Monitor auth state
   useEffect(() => {
-    // Si la ruta cambia, podemos resetear authMode si es necesario, 
-    // pero la lógica centralizada ya se encarga de la mayoría de casos.
-    if (location.pathname === '/asdtyucvb') {
-      setAuthMode('admin');
-    } else if (location.pathname === '/staff') {
-      setAuthMode('staff');
-    }
-  }, [location.pathname]);
-
-  // ELIMINADO: useEffect que forzaba recarga de usuario. 
-  // Ya no es necesario porque el flujo centralizado carga lo correcto desde el principio.
-
-  useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         // Verificar SIEMPRE primero si es un restaurante con registro pendiente (Borrador)
@@ -69,7 +56,8 @@ function App() {
           if (draftDoc.exists() && draftDoc.data().status === 'draft') {
             console.log("Detectado borrador de restaurante. Redirigiendo a registro...");
             setResumeData(draftDoc.data());
-            setAuthMode('restaurant-registration-resume');
+            // setAuthMode('restaurant-registration-resume'); // OLD
+            navigate('/restaurant/registration/resume');
             setIsLoading(false);
             return; // Detener flujo aquí, no cargar usuario normal
           }
@@ -79,7 +67,8 @@ function App() {
           if (riderDraftDoc.exists() && riderDraftDoc.data().status === 'draft') {
             console.log("Detectado borrador de rider. Redirigiendo a registro...");
             setResumeData(riderDraftDoc.data());
-            setAuthMode('rider-registration-resume');
+            // setAuthMode('rider-registration-resume'); // OLD
+            navigate('/rider/registration/resume');
             setIsLoading(false);
             return; // Detener flujo aquí
           }
@@ -92,24 +81,21 @@ function App() {
           
           // LÓGICA DE PRIORIDAD DE BÚSQUEDA
           // 1. Si estamos en ruta de Admin (/asdtyucvb), buscar PRIMERO en 'mandar'
-          if (location.pathname === '/asdtyucvb') {
-             console.log("Ruta Admin detectada. Buscando en colección 'mandar'...");
+          if (location.pathname === '/asdtyucvb' || location.pathname === '/login') {
+             console.log("Ruta Admin/Login detectada. Buscando en colección 'mandar'...");
              const adminQuery = query(collection(dbAdmin, "mandar"), where("email", "==", firebaseUser.email));
              const adminSnapshot = await getDocs(adminQuery);
 
              if (!adminSnapshot.empty) {
-                const adminData = adminSnapshot.docs[0].data();
-                console.log("Usuario encontrado en Mandar (Admin):", adminData);
-                setUser({
-                   id: firebaseUser.uid,
-                   email: firebaseUser.email || '',
-                   role: 'admin',
-                   name: adminData.name || 'Admin',
-                   status: (adminData.state as User['status']) || 'active',
-                   joinedDate: new Date().toISOString()
-                } as User);
+                const adminDoc = adminSnapshot.docs[0];
+                const userData = { id: adminDoc.id, ...adminDoc.data() } as User;
+                console.log("Admin encontrado en 'mandar':", userData);
+                setUser(userData);
                 setIsLoading(false);
-                return; // Encontrado y configurado, salimos.
+                if (location.pathname === '/asdtyucvb' || location.pathname === '/login') {
+                    navigate('/dashboard');
+                }
+                return;
              }
           }
 
@@ -442,7 +428,7 @@ function App() {
         onRestaurantClick={() => navigate('/restaurant')}
       />} />
       
-      <Route path="/login" element={<UserAuth onLogin={() => {}} onBack={() => navigate('/')} />} />
+      <Route path="/login" element={<UserAuth onLogin={() => navigate('/dashboard')} onBack={() => navigate('/')} />} />
       <Route path="/asdtyucvb" element={<Login onLogin={() => navigate('/dashboard')} onBack={() => navigate('/')} variant="admin" />} />
       <Route path="/staff" element={<StaffLogin onLogin={() => navigate('/dashboard')} onBack={() => navigate('/')} />} />
       
