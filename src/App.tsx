@@ -13,6 +13,7 @@ import { UsersList } from './pages/Users';
 import { DishesList } from './pages/Dishes';
 import { DishRequests } from './pages/DishRequests';
 import { RestaurantRequests } from './pages/RestaurantRequests';
+import { RiderRequests } from './pages/RiderRequests';
 import { Dashboard } from './pages/Dashboard';
 import { WelcomePage } from './pages/WelcomePage';
 import { BannerManagerPage } from './pages/BannerManagerPage';
@@ -274,6 +275,7 @@ function App() {
       case 'content-product-governance': return <DishesList initialRestaurantId={selectedRestaurantId} />;
       case 'dish-requests': return <DishRequests />;
       case 'restaurant-requests': return <RestaurantRequests />;
+      case 'rider-requests': return <RiderRequests />;
       default: return <Dashboard initialTab="overview" />;
     }
   };
@@ -293,6 +295,7 @@ function App() {
       case 'content-product-governance': return 'Gobernanza de Productos';
       case 'dish-requests': return 'Solicitudes de Platos';
       case 'restaurant-requests': return 'Solicitudes de Restaurantes';
+      case 'rider-requests': return 'Solicitudes de Riders';
       default: return 'Dashboard';
     }
   };

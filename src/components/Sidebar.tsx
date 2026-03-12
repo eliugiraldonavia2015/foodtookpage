@@ -1,4 +1,4 @@
-import { LogOut, LayoutDashboard, TrendingUp, Heart, Activity, Shield, DollarSign, Map, Users, Utensils, ClipboardList, Store, X } from 'lucide-react';
+import { LogOut, LayoutDashboard, TrendingUp, Heart, Activity, Shield, DollarSign, Map, Users, Utensils, ClipboardList, Store, Bike, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Tab } from '../types';
 
@@ -23,6 +23,7 @@ export function Sidebar({ activeTab, setActiveTab, onLogout, isOpen, onClose }: 
     { id: 'content-product-governance', label: 'Content & Product Gov', icon: Utensils },
     { id: 'dish-requests', label: 'Dish Requests', icon: ClipboardList },
     { id: 'restaurant-requests', label: 'Restaurant Requests', icon: Store },
+    { id: 'rider-requests', label: 'Rider Requests', icon: Bike },
   ] as const;
 
   return (

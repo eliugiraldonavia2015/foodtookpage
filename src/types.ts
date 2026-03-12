@@ -56,6 +56,24 @@ export interface RestaurantRequest {
   documents?: Record<string, string>; // Changed from string[] to Record for URL map
 }
 
+export interface RiderRequest {
+  id: string;
+  firstName: string;
+  lastName: string;
+  idNumber: string; // Cédula/DNI
+  email: string;
+  phone: string;
+  city: string;
+  address: string;
+  vehicle: {
+    type: 'moto' | 'bici' | 'auto';
+    plate?: string;
+  };
+  submittedAt: string;
+  status: 'pending' | 'second_attempt' | 'approved' | 'rejected';
+  documents?: Record<string, string>;
+}
+
 export interface SupportTicket {
   id: string;
   type: 'client' | 'restaurant' | 'rider';
@@ -98,4 +116,5 @@ export type Tab =
   | 'users-restaurants' 
   | 'content-product-governance' 
   | 'dish-requests' 
-  | 'restaurant-requests';
+  | 'restaurant-requests'
+  | 'rider-requests';
