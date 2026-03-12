@@ -516,10 +516,14 @@ export function RestaurantRegistration({ onBack, initialData }: RestaurantRegist
 
     setIsSubmitting(true);
     try {
+      console.log("Iniciando envío de solicitud...");
+      
       // 0. Autenticación / Creación de Usuario
       let user = auth.currentUser;
+      console.log("Usuario actual:", user?.uid);
       
       if (!user) {
+          console.log("No hay usuario, intentando crear/loguear...");
           if (!formData.email || !formData.password) {
               throw new Error("Faltan credenciales (email/password) para crear la cuenta.");
           }
@@ -527,11 +531,15 @@ export function RestaurantRegistration({ onBack, initialData }: RestaurantRegist
           try {
               const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
               user = userCredential.user;
+              console.log("Usuario creado:", user.uid);
           } catch (authError: any) {
+              console.error("Error al crear usuario:", authError);
               if (authError.code === 'auth/email-already-in-use') {
                   // Intentar login si el correo ya existe
+                  console.log("Email en uso, intentando login...");
                   const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
                   user = userCredential.user;
+                  console.log("Login exitoso:", user.uid);
               } else {
                   throw authError;
               }
@@ -543,20 +551,25 @@ export function RestaurantRegistration({ onBack, initialData }: RestaurantRegist
       // 1. Usar el UID del usuario como ID del documento
       const requestId = user.uid;
       const restaurantRef = doc(db, "restaurant_requests", requestId);
+      console.log("Referencia a Firestore creada:", requestId);
 
       // 2. Subir archivos a Storage (usando UID para carpeta segura)
       const fileUrls: Record<string, string> = {};
       
+      console.log("Iniciando subida de archivos...");
       for (const [key, file] of Object.entries(formData.files)) {
         if (file) {
+          console.log(`Subiendo ${key}...`);
           const fileRef = ref(storage, `restaurant-documents/${requestId}/${key}_${file.name}`);
           await uploadBytes(fileRef, file);
           const downloadURL = await getDownloadURL(fileRef);
           fileUrls[`${key}Url`] = downloadURL;
+          console.log(`${key} subido exitosamente.`);
         }
       }
 
       // 3. Guardar datos en Firestore
+      console.log("Guardando datos en Firestore...");
       await setDoc(restaurantRef, {
         id: requestId,
         uid: user.uid, // Guardar UID explícitamente también
@@ -584,10 +597,11 @@ export function RestaurantRegistration({ onBack, initialData }: RestaurantRegist
         platform: 'web',
         appVersion: '1.0.0'
       });
+      console.log("Datos guardados correctamente.");
 
       setIsSuccess(true);
     } catch (error: any) {
-      console.error("Error al enviar solicitud:", error);
+      console.error("Error DETALLADO al enviar solicitud:", error);
       let errorMessage = "Hubo un error al enviar tu solicitud. Por favor intenta nuevamente.";
       
       if (error.code === 'auth/weak-password') {
@@ -595,7 +609,11 @@ export function RestaurantRegistration({ onBack, initialData }: RestaurantRegist
       } else if (error.code === 'auth/invalid-email') {
           errorMessage = "El correo electrónico no es válido.";
       } else if (error.code === 'permission-denied') {
-          errorMessage = "No tienes permisos para realizar esta operación. Verifica tu conexión o intenta recargar.";
+          errorMessage = "Permiso denegado: Revisa que estés logueado y que los archivos no sean demasiado grandes.";
+      } else if (error.code === 'storage/unauthorized') {
+          errorMessage = "No tienes permiso para subir archivos. Intenta recargar la página.";
+      } else if (error.message) {
+          errorMessage = `Error: ${error.message}`;
       }
 
       alert(errorMessage);
