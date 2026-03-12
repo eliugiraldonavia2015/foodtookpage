@@ -509,13 +509,42 @@ export function RestaurantRegistration({ onBack, initialData }: RestaurantRegist
       return;
     }
 
+    if (!termsAccepted) {
+        alert("Debes aceptar los términos y condiciones.");
+        return;
+    }
+
     setIsSubmitting(true);
     try {
-      // 1. Crear referencia al documento para obtener ID
-      const newRestaurantRef = doc(collection(db, "restaurant_requests"));
-      const requestId = newRestaurantRef.id;
+      // 0. Autenticación / Creación de Usuario
+      let user = auth.currentUser;
+      
+      if (!user) {
+          if (!formData.email || !formData.password) {
+              throw new Error("Faltan credenciales (email/password) para crear la cuenta.");
+          }
+          
+          try {
+              const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+              user = userCredential.user;
+          } catch (authError: any) {
+              if (authError.code === 'auth/email-already-in-use') {
+                  // Intentar login si el correo ya existe
+                  const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
+                  user = userCredential.user;
+              } else {
+                  throw authError;
+              }
+          }
+      }
 
-      // 2. Subir archivos a Storage
+      if (!user) throw new Error("No se pudo autenticar al usuario.");
+
+      // 1. Usar el UID del usuario como ID del documento
+      const requestId = user.uid;
+      const restaurantRef = doc(db, "restaurant_requests", requestId);
+
+      // 2. Subir archivos a Storage (usando UID para carpeta segura)
       const fileUrls: Record<string, string> = {};
       
       for (const [key, file] of Object.entries(formData.files)) {
@@ -528,8 +557,9 @@ export function RestaurantRegistration({ onBack, initialData }: RestaurantRegist
       }
 
       // 3. Guardar datos en Firestore
-      await setDoc(newRestaurantRef, {
+      await setDoc(restaurantRef, {
         id: requestId,
+        uid: user.uid, // Guardar UID explícitamente también
         status: 'pending',
         submittedAt: serverTimestamp(),
         
@@ -556,9 +586,19 @@ export function RestaurantRegistration({ onBack, initialData }: RestaurantRegist
       });
 
       setIsSuccess(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error al enviar solicitud:", error);
-      alert("Hubo un error al enviar tu solicitud. Por favor intenta nuevamente.");
+      let errorMessage = "Hubo un error al enviar tu solicitud. Por favor intenta nuevamente.";
+      
+      if (error.code === 'auth/weak-password') {
+          errorMessage = "La contraseña es muy débil. Debe tener al menos 6 caracteres.";
+      } else if (error.code === 'auth/invalid-email') {
+          errorMessage = "El correo electrónico no es válido.";
+      } else if (error.code === 'permission-denied') {
+          errorMessage = "No tienes permisos para realizar esta operación. Verifica tu conexión o intenta recargar.";
+      }
+
+      alert(errorMessage);
     } finally {
       setIsSubmitting(false);
     }

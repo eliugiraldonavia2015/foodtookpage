@@ -524,12 +524,41 @@ export function RiderRegistration({ onBack, initialData }: RiderRegistrationProp
   };
 
   const handleSubmit = async () => {
+    if (!termsAccepted) {
+        alert("Debes aceptar los términos y condiciones.");
+        return;
+    }
+
     try {
       setIsSuccess(false); // Reset success state
       
-      // 1. Create reference for ID
-      const newRiderRef = doc(collection(db, "rider_requests"));
-      const requestId = newRiderRef.id;
+      // 0. Autenticación / Creación de Usuario
+      let user = auth.currentUser;
+      
+      if (!user) {
+          if (!formData.email || !formData.password) {
+              throw new Error("Faltan credenciales (email/password) para crear la cuenta.");
+          }
+          
+          try {
+              const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+              user = userCredential.user;
+          } catch (authError: any) {
+              if (authError.code === 'auth/email-already-in-use') {
+                  // Intentar login si el correo ya existe
+                  const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
+                  user = userCredential.user;
+              } else {
+                  throw authError;
+              }
+          }
+      }
+
+      if (!user) throw new Error("No se pudo autenticar al usuario.");
+
+      // 1. Create reference for ID using User UID
+      const requestId = user.uid;
+      const riderRef = doc(db, "rider_requests", requestId);
 
       // 2. Upload files to Storage
       const fileUrls: Record<string, string> = {};
@@ -544,8 +573,9 @@ export function RiderRegistration({ onBack, initialData }: RiderRegistrationProp
       }
 
       // 3. Save to Firestore "rider_requests" collection
-      await setDoc(newRiderRef, {
+      await setDoc(riderRef, {
         id: requestId,
+        uid: user.uid,
         status: 'pending',
         submittedAt: serverTimestamp(),
         
@@ -586,6 +616,8 @@ export function RiderRegistration({ onBack, initialData }: RiderRegistrationProp
         errorMsg = "El correo electrónico ya está registrado.";
       } else if (error.code === 'auth/weak-password') {
         errorMsg = "La contraseña es muy débil.";
+      } else if (error.code === 'permission-denied') {
+        errorMsg = "No tienes permisos para realizar esta operación.";
       }
       alert(errorMsg); 
     }
