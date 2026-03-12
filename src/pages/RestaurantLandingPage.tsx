@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, ChefHat, TrendingUp, Users, Video, DollarSign, BarChart3, Star } from 'lucide-react';
 import { RestaurantRegistration } from './RestaurantRegistration';
+import { Footer } from '../components/Footer';
 
 interface RestaurantLandingPageProps {
   onBack: () => void;
@@ -36,9 +37,7 @@ export function RestaurantLandingPage({ onBack, onLoginClick }: RestaurantLandin
       {/* Navigation */}
       <nav className="relative z-50 flex items-center justify-between px-6 py-6 max-w-7xl mx-auto">
         <div className="flex items-center gap-2">
-          <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/30">
-            <span className="text-white font-bold text-xl">FT</span>
-          </div>
+          <img src="/logonaranja.png" alt="FoodTook Partner" className="w-10 h-10 object-contain" />
           <span className="font-bold text-xl tracking-tight text-slate-900">FoodTook Partner</span>
         </div>
         
@@ -214,6 +213,8 @@ export function RestaurantLandingPage({ onBack, onLoginClick }: RestaurantLandin
           </div>
         </div>
       </section>
+
+      <Footer logoSrc="/logonaranja.png" />
     </div>
   );
 }

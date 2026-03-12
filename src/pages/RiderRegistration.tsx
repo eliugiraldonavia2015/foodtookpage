@@ -664,9 +664,7 @@ export function RiderRegistration({ onBack, initialData }: RiderRegistrationProp
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 max-w-7xl mx-auto w-full bg-white/80 backdrop-blur-md border-b border-slate-100/50 rounded-b-2xl md:rounded-none md:bg-transparent md:backdrop-blur-none md:border-none transition-all">
         <div className="flex items-center gap-2">
-          <div className="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center shadow-lg shadow-green-500/30">
-            <span className="text-white font-bold text-xl">FT</span>
-          </div>
+          <img src="/logoverde.png" alt="Registro Rider" className="w-10 h-10 object-contain" />
           <span className="font-bold text-xl tracking-tight text-slate-900">Registro Rider</span>
         </div>
         
@@ -1263,7 +1261,7 @@ export function RiderRegistration({ onBack, initialData }: RiderRegistrationProp
           setIsMapOpen(false);
         }} 
       />
-      <Footer />
+      <Footer logoSrc="/logoverde.png" />
     </div>
   );
 }

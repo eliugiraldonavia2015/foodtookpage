@@ -1,15 +1,23 @@
 import React from 'react';
 import { Facebook, Instagram, Twitter, Linkedin, Heart } from 'lucide-react';
 
-export const Footer = () => {
+interface FooterProps {
+  logoSrc?: string;
+}
+
+export const Footer = ({ logoSrc }: FooterProps) => {
   return (
     <footer className="bg-slate-900 text-slate-300 py-12 border-t border-slate-800">
       <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-4 gap-8 mb-8">
         <div className="space-y-4">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-brand-green rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">FT</span>
-            </div>
+            {logoSrc ? (
+              <img src={logoSrc} alt="FoodTook Logo" className="w-8 h-8 object-contain" />
+            ) : (
+              <div className="w-8 h-8 bg-brand-green rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-lg">FT</span>
+              </div>
+            )}
             <span className="font-bold text-xl text-white">FoodTook</span>
           </div>
           <p className="text-sm text-slate-400">
