@@ -53,7 +53,7 @@ export interface RestaurantRequest {
   province: string;
   submittedAt: string;
   status: 'pending' | 'second_attempt' | 'approved' | 'rejected';
-  documents?: string[]; // URLs to docs
+  documents?: Record<string, string>; // Changed from string[] to Record for URL map
 }
 
 export interface SupportTicket {

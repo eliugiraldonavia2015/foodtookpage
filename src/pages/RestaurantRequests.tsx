@@ -1,33 +1,34 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Check, X, MapPin, Phone, Mail, User, Calendar, Search, Filter, AlertCircle, ChevronDown, Store, FileText, Eye, Download } from 'lucide-react';
-import { restaurantRequestsData } from '../data';
 import { RestaurantRequest } from '../types';
 import { exportToCSV } from '../utils/csvExport';
+import { collection, query, where, onSnapshot, doc, updateDoc, orderBy } from 'firebase/firestore';
+import { db } from '../firebase';
 
 const LOCATIONS = {
   'Ecuador': ['Pichincha', 'Guayas', 'Azuay', 'Manabí', 'Loja'],
   'Colombia': ['Cundinamarca', 'Antioquia', 'Valle del Cauca', 'Atlántico', 'Bolívar']
 };
 
-const DOCUMENTS = [
-  { name: 'RUC / Identificación Fiscal', type: 'PDF', size: '2.4 MB', status: 'verified', isEmpty: false },
-  { name: 'Permiso de Funcionamiento', type: 'PDF', size: '1.1 MB', status: 'pending', isEmpty: false },
-  { name: 'Cédula del Propietario', type: 'JPG', size: '4.5 MB', status: 'verified', isEmpty: false },
-  { name: 'Menú Digital', type: 'PDF', size: '8.2 MB', status: 'pending', isEmpty: true },
-  { name: 'Certificado Bancario', type: 'PDF', size: '1.5 MB', status: 'pending', isEmpty: false }
-];
+const DOCUMENTS_LABELS: Record<string, string> = {
+  'rucUrl': 'RUC / Identificación Fiscal',
+  'identityUrl': 'Cédula del Propietario',
+  'menuUrl': 'Menú Digital',
+  'bankUrl': 'Certificado Bancario'
+};
 
 const statusStyles: Record<RestaurantRequest['status'], { label: string; className: string }> = {
   pending: { label: 'Pendiente', className: 'bg-amber-500/10 text-amber-200 border-amber-500/20' },
   second_attempt: { label: '2do intento', className: 'bg-orange-500/10 text-orange-200 border-orange-500/20' },
-  rejected: { label: 'Cechazado', className: 'bg-rose-500/10 text-rose-200 border-rose-500/20' },
+  rejected: { label: 'Rechazado', className: 'bg-rose-500/10 text-rose-200 border-rose-500/20' },
   approved: { label: 'Aprobado', className: 'bg-emerald-500/10 text-emerald-200 border-emerald-500/20' }
 };
 
 export function RestaurantRequests() {
-  const [requests, setRequests] = useState<RestaurantRequest[]>(restaurantRequestsData);
+  const [requests, setRequests] = useState<RestaurantRequest[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCountry, setSelectedCountry] = useState<string>('');
   const [selectedProvince, setSelectedProvince] = useState<string>('');
@@ -42,26 +43,51 @@ export function RestaurantRequests() {
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [isRejecting, setIsRejecting] = useState(false);
 
-  const handleApprove = (id: string, onDone?: () => void) => {
-    // If called from the modal (onDone exists), close modal first then start animation
-    if (onDone) {
-      onDone();
-      // Small delay to allow modal close animation to start/finish
+  // 1. Escuchar cambios en Firestore en tiempo real
+  useEffect(() => {
+    const q = query(
+      collection(db, "restaurant_requests"),
+      orderBy("submittedAt", "desc")
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetchedRequests: RestaurantRequest[] = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          restaurantName: data.restaurantName || 'Sin Nombre',
+          ownerName: data.ownerName || 'Desconocido',
+          email: data.email || '',
+          phone: data.phone || '',
+          country: data.country || '',
+          province: data.province || '',
+          address: data.address || '', // Added address
+          status: (data.status as RestaurantRequest['status']) || 'pending',
+          submittedAt: data.submittedAt?.toDate?.().toISOString() || new Date().toISOString(),
+          documents: data.documents || {}
+        };
+      });
+      setRequests(fetchedRequests);
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const handleApprove = async (id: string, onDone?: () => void) => {
+    setApprovingId(id);
+    try {
+      const reqRef = doc(db, "restaurant_requests", id);
+      await updateDoc(reqRef, { status: 'approved' });
+      
       setTimeout(() => {
-        setApprovingId(id);
-        setTimeout(() => {
-          setRequests((prev) => prev.filter((r) => r.id !== id));
-          setApprovingId(null);
-        }, 2000);
-      }, 300);
-    } else {
-      // Direct approval from card
-      setApprovingId(id);
-      setTimeout(() => {
-        setRequests((prev) => prev.filter((r) => r.id !== id));
         setApprovingId(null);
         onDone?.();
       }, 2000);
+    } catch (error) {
+      console.error("Error approving request:", error);
+      setApprovingId(null);
+      alert("Error al aprobar la solicitud");
     }
   };
 
@@ -75,37 +101,93 @@ export function RestaurantRequests() {
   const openDocsModal = (req: RestaurantRequest) => {
     setSelectedRequest(req);
     setIsDocsModalOpen(true);
-    setSelectedDocs(DOCUMENTS.length ? [0] : []);
+    setSelectedDocs([]);
   };
 
-  const handleReject = () => {
+  const handleReject = async () => {
     if (!selectedRequest || isRejecting) return;
     setIsRejecting(true);
     
-    // Simulate API call
-    setTimeout(() => {
+    try {
       const idToReject = selectedRequest.id;
+      const reqRef = doc(db, "restaurant_requests", idToReject);
+      
+      await updateDoc(reqRef, { 
+        status: 'rejected',
+        rejectionReason: rejectReason
+      });
+
       setIsRejecting(false);
       setIsRejectModalOpen(false);
       setRejectingId(idToReject);
 
-      // Wait for animation to finish
       setTimeout(() => {
-        setRequests((prev) => prev.filter((r) => r.id !== idToReject));
         setRejectingId(null);
         setSelectedRequest(null);
         setRejectReason('');
       }, 2000);
-    }, 600);
+    } catch (error) {
+      console.error("Error rejecting request:", error);
+      setIsRejecting(false);
+      alert("Error al rechazar la solicitud");
+    }
   };
 
   const toggleDocSelection = (index: number) => {
     setSelectedDocs([index]);
   };
 
-  const selectedDocNames = selectedDocs
-    .map((index) => DOCUMENTS[index]?.name)
-    .filter((name): name is string => Boolean(name));
+  // Helper para mostrar documentos dinámicos desde Firebase
+  const renderDocsList = (req: RestaurantRequest) => {
+    if (!req.documents) return <p className="text-slate-400">No hay documentos adjuntos.</p>;
+    
+    const docs = Object.entries(req.documents).map(([key, url], index) => ({
+      name: DOCUMENTS_LABELS[key] || key,
+      url,
+      type: 'ARCHIVO', // Podríamos inferir tipo si guardamos metadata
+      index
+    }));
+
+    return docs.map((doc, i) => (
+      <div 
+        key={i}
+        onClick={() => toggleDocSelection(i)}
+        className={`p-4 rounded-2xl border cursor-pointer transition-all ${
+          selectedDocs.includes(i) 
+            ? 'bg-brand-pink/10 border-brand-pink/30 shadow-[0_0_20px_rgba(236,72,153,0.15)]' 
+            : 'bg-white/5 border-white/10 hover:border-white/20 hover:bg-white/10'
+        }`}
+      >
+        <div className="flex items-start justify-between mb-3">
+          <div className="p-2 bg-white/10 rounded-lg">
+            <FileText size={20} className={selectedDocs.includes(i) ? 'text-brand-pink' : 'text-slate-400'} />
+          </div>
+          <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${
+            selectedDocs.includes(i)
+              ? 'bg-brand-pink border-brand-pink'
+              : 'border-slate-600'
+          }`}>
+            {selectedDocs.includes(i) && <Check size={12} className="text-white" strokeWidth={3} />}
+          </div>
+        </div>
+        <h4 className={`font-semibold text-sm mb-1 ${selectedDocs.includes(i) ? 'text-white' : 'text-slate-300'}`}>
+          {doc.name}
+        </h4>
+        <div className="flex items-center justify-between mt-2">
+          <span className="text-xs text-slate-500 font-medium">{doc.type}</span>
+          <a 
+            href={doc.url} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-xs text-cyan-400 hover:text-cyan-300 flex items-center gap-1"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Eye size={12} /> Ver
+          </a>
+        </div>
+      </div>
+    ));
+  };
 
   const filteredRequests = requests.filter((req: RestaurantRequest) => {
     const matchesSearch = 
@@ -431,53 +513,15 @@ export function RestaurantRequests() {
                   <FileText size={18} className="text-brand-pink" />
                   Archivos Adjuntos
                 </h4>
-                {DOCUMENTS.map((doc, index) => {
-                  const isSelected = selectedDocs.includes(index);
-                  return (
-                  <button
-                    key={doc.name}
-                    type="button"
-                    onClick={() => toggleDocSelection(index)}
-                    className={`w-full flex items-center justify-between p-4 border rounded-2xl transition-all ${isSelected ? 'bg-cyan-500/10 border-cyan-500/30 ring-1 ring-cyan-500/20' : 'border-white/10 hover:bg-white/5'}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs ${doc.type === 'PDF' ? 'bg-rose-500/15 text-rose-300' : 'bg-cyan-500/15 text-cyan-300'}`}>
-                        {doc.type}
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-white text-sm">{doc.name}</h4>
-                        <div className="flex items-center gap-2 mt-1">
-                          {doc.isEmpty ? (
-                            <span className="flex items-center gap-1 text-[10px] font-bold text-slate-400 bg-slate-500/10 px-1.5 py-0.5 rounded-full">
-                              <AlertCircle size={8} strokeWidth={4} /> Vacío
-                            </span>
-                          ) : (
-                            <span className="text-xs text-slate-400">{doc.size}</span>
-                          )}
-                          {doc.status === 'verified' && !doc.isEmpty && (
-                            <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-300 bg-emerald-500/10 px-1.5 py-0.5 rounded-full">
-                              <Check size={8} strokeWidth={4} /> Verificado
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div className={`w-6 h-6 rounded-full border flex items-center justify-center ${isSelected ? 'border-cyan-400 bg-cyan-500 text-white' : 'border-white/10 text-transparent'}`}>
-                      <Check size={14} strokeWidth={3} />
-                    </div>
-                  </button>
-                );
-                })}
+                {selectedRequest && renderDocsList(selectedRequest)}
               </div>
 
               <div className="lg:col-span-2 bg-slate-900/60 rounded-2xl p-1 flex flex-col h-full overflow-hidden border border-white/10">
                 <div className="bg-slate-900/70 px-4 py-2 flex justify-between items-center rounded-t-xl shrink-0">
                   <span className="text-slate-300 text-xs font-mono">
-                    {selectedDocNames.length === 0
+                    {selectedDocs.length === 0
                       ? 'Selecciona documentos'
-                      : selectedDocNames.length === 1
-                      ? selectedDocNames[0]
-                      : `Documentos seleccionados (${selectedDocNames.length})`}
+                      : 'Documento seleccionado'}
                   </span>
                   <div className="flex gap-2">
                     <button className="text-slate-400 hover:text-white"><Download size={16} /></button>
@@ -489,29 +533,35 @@ export function RestaurantRequests() {
                     <FileText size={120} className="text-white" />
                   </div>
                   <div className="text-center">
-                    {selectedDocs.length > 0 && DOCUMENTS[selectedDocs[0]].isEmpty ? (
-                      <>
-                        <div className="w-20 h-20 bg-slate-800/50 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/5">
-                          <AlertCircle size={40} className="text-slate-500" />
-                        </div>
-                        <p className="text-slate-300 font-semibold mb-2">Documento no disponible</p>
-                        <p className="text-slate-500 text-sm max-w-xs mx-auto">El usuario no ha subido este archivo o está pendiente de carga.</p>
-                      </>
+                    {selectedDocs.length > 0 && selectedRequest?.documents ? (
+                      (() => {
+                        // Safe access to document URL
+                        const docEntries = Object.entries(selectedRequest.documents);
+                        const selectedDocEntry = docEntries[selectedDocs[0]];
+                        
+                        if (!selectedDocEntry) return <p className="text-slate-400">Documento no encontrado</p>;
+                        
+                        const [key, url] = selectedDocEntry;
+                        const label = DOCUMENTS_LABELS[key] || key;
+
+                        return (
+                          <>
+                            <p className="text-slate-400 mb-4">Vista previa: {label}</p>
+                            <a 
+                              href={url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-4 py-2 bg-brand-pink hover:bg-brand-pink/80 text-white rounded-lg text-sm font-bold transition-colors backdrop-blur-md border border-white/10 inline-flex items-center gap-2"
+                            >
+                              <Eye size={16} />
+                              Abrir Documento Original
+                            </a>
+                          </>
+                        );
+                      })()
                     ) : (
                       <>
-                        <p className="text-slate-400 mb-4">Vista previa del documento</p>
-                        {selectedDocNames.length > 1 && (
-                          <div className="flex flex-wrap justify-center gap-2 mb-4 max-w-xl">
-                            {selectedDocNames.map((name) => (
-                              <span key={name} className="px-3 py-1 bg-white/10 text-white text-xs rounded-full border border-white/10">
-                                {name}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                        <button className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm font-bold transition-colors backdrop-blur-md border border-white/10">
-                          Abrir en nueva pestaña
-                        </button>
+                        <p className="text-slate-400 mb-4">Selecciona un archivo para ver</p>
                       </>
                     )}
                   </div>
