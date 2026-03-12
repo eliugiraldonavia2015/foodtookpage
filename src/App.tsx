@@ -172,29 +172,20 @@ function App() {
                       joinedDate: new Date().toISOString()
                    } as User);
                 } else {
-                   console.warn("Usuario autenticado pero NO encontrado en ninguna colección");
-                   // Usuario fantasma (Auth sí, DB no)
-                   setUser({
-                     id: firebaseUser.uid,
-                     email: firebaseUser.email || '',
-                     role: 'user',
-                     name: firebaseUser.displayName || 'Usuario',
-                     status: 'active',
-                     joinedDate: new Date().toISOString()
-                   });
+                   console.warn("Usuario autenticado pero NO encontrado en ninguna colección. Cerrando sesión...");
+                   // FORCE LOGOUT: Usuario no existe en DB, eliminar sesión residual.
+                   await signOut(auth);
+                   setUser(null);
+                   setAuthMode('none');
+                   navigate('/');
                 }
              }
           }
         } catch (error) {
           console.error("Error fetching user profile from Firestore:", error);
-          setUser({
-            id: firebaseUser.uid,
-            email: firebaseUser.email || '',
-            role: 'user',
-            name: firebaseUser.displayName || 'Usuario (Error)',
-            status: 'active',
-            joinedDate: new Date().toISOString()
-          });
+          // Ante error grave de DB, mejor desloguear por seguridad
+          await signOut(auth);
+          setUser(null);
         }
       } else {
         console.log("No hay usuario autenticado");
@@ -204,7 +195,7 @@ function App() {
     });
 
     return () => unsubscribe();
-  }, [location.pathname]); // Añadido location.pathname para re-ejecutar si cambia la ruta (importante para la lógica de prioridad)
+  }, [navigate, location.pathname]);
 
   useEffect(() => {
     setSearchTerm('');
